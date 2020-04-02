@@ -127,7 +127,6 @@ class DataExtractor:
                 self.data = self.data.append(state_df, sort=True)
             except KeyError:
                 print("Captured Key Error")
-        self.save_data()
 
     def save_data(self):
         self.data.to_csv(self.target_directory+'all_data.csv')
@@ -150,7 +149,6 @@ class DataExtractor:
                 break
         return result
 
-
     def fetch_historical_predictions(self):
         # for each row in the Ground Truth data, search for up to X day lookahead of historical predictions.
         # Create prediction columns in the data
@@ -158,9 +156,13 @@ class DataExtractor:
             ev_column_title = 'deaths_pred_' + str(pred_idx) + '_EV'
             ub_column_title = 'deaths_pred_' + str(pred_idx) + '_UB'
             lb_column_title = 'deaths_pred_' + str(pred_idx) + '_LB'
+            error_column_title = 'deaths_pred_' + str(pred_idx) + '_error'
+            inside_column_title = 'deaths_pred_' + str(pred_idx) + '_inside'
             self.data[ev_column_title] = np.nan
             self.data[ub_column_title] = np.nan
             self.data[lb_column_title] = np.nan
+            self.data[error_column_title] = np.nan
+            self.data[inside_column_title] = np.nan
         for index, row in self.data.iterrows():
             for pred_idx in range(1, self.n_lookahead_evaluations+1):
                 result = self.get_death_prediction(index-pd.Timedelta(str(pred_idx)+' days'), index , row['state_long'])
@@ -168,6 +170,11 @@ class DataExtractor:
                     self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_EV'] = result['EV'].values[0]
                     self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_UB'] = result['UB'].values[0]
                     self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_LB'] = result['LB'].values[0]
+                    self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_error'] = result['EV'].values[0] - row['delta_deaths']
+                    if row['delta_deaths'] >= result['LB'].values[0] and row['delta_deaths'] <= result['UB'].values[0]:
+                        self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside'] = 1
+                    else:
+                        self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside'] = 0
         print("fetching predictions.")
 
     def extract(self):
@@ -175,8 +182,10 @@ class DataExtractor:
             print("COVID-19 Data Extractor: Extracting data")
             self.download_predictions()
             self.download_ground_truth()
-            # Apend predictions to ground truth data
+            # Append predictions to ground truth data
             self.fetch_historical_predictions()
+            self.save_data()
+            print("Sleeping")
             time.sleep(self.data_extraction_period)
 
 
