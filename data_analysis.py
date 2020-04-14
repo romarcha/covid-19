@@ -13,12 +13,127 @@ import datetime
 import time
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
+usa_states = [('AK', 'Alaska',10),
+                   ('AL', 'Alabama', 1000),
+                   ('AR', 'Arkansas', 50),
+                   ('AZ', 'Arizona', 100),
+                   ('CA', 'California', 300),
+                   ('CO', 'Colorado', 150),
+                   ('CT', 'Connecticut', 60),
+                   ('DC', 'District of Columbia',30),
+                   ('DE', 'Delaware',40),
+                   ('FL', 'Florida',500),
+                   ('GA', 'Georgia',120),
+                   ('HI', 'Hawaii',25),
+                   ('IA', 'Iowa',70),
+                   ('ID', 'Idaho',30),
+                   ('IL', 'Illinois',360),
+                   ('IN', 'Indiana',80),
+                   ('KS', 'Kansas',40),
+                   ('KY', 'Kentucky',65),
+                   ('LA', 'Louisiana',180),
+                   ('MA', 'Massachusetts',180),
+                   ('MD', 'Maryland',120),
+                   ('ME', 'Maine',160),
+                   ('MI', 'Michigan',250),
+                   ('MN', 'Minnesota',130),
+                   ('MO', 'Missouri',60),
+                   ('MS', 'Mississippi',180),
+                   ('MT', 'Montana',17),
+                   ('NC', 'North Carolina',160),
+                   ('ND', 'North Dakota',12),
+                   ('NE', 'Nebraska',30),
+                   ('NH', 'New Hampshire',20),
+                   ('NJ', 'New Jersey',150),
+                   ('NM', 'New Mexico',35),
+                   ('NV', 'Nevada',60),
+                   ('NY', 'New York',1200),
+                   ('OH', 'Ohio',170),
+                   ('OK', 'Oklahoma',100),
+                   ('OR', 'Oregon',25),
+                   ('PA', 'Pennsylvania',120),
+                   ('RI', 'Rhode Island',15),
+                   ('SC', 'South Carolina',65),
+                   ('SD', 'South Dakota',12),
+                   ('TN', 'Tennessee',350),
+                   ('TX', 'Texas',400),
+                   ('UT', 'Utah',35),
+                   ('VA', 'Virginia',180),
+                   ('VT', 'Vermont',4),
+                   ('WA', 'Washington',80),
+                   ('WI', 'Wisconsin',190),
+                   ('WV', 'West Virginia',35),
+                   ('WY', 'Wyoming',10)]
 
 data_frame = pd.read_csv('data/all_data.csv')
-data_frame['datetime'] = pd.to_datetime(data_frame['datetime'])
-data_frame.index = data_frame['datetime']
-data_frame = data_frame.drop(columns="datetime")
+data_frame['date'] = pd.to_datetime(data_frame['date'])
+data_frame.index = data_frame['date']
+data_frame = data_frame.drop(columns="date")
 data_frame = data_frame.sort_index()
+
+# Comparison prediction
+for state in usa_states:
+    fig, ax = plt.subplots()
+    date_1 = "2020-03-29"
+    date_2 = "2020-04-03"
+    data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_1 + '_EV'].plot(
+        title=state[1]+" model update", color='b', label='Model of '+date_1)
+    # data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].plot(marker='x', linewidth=0)
+    avail_data = data_frame
+    avail_data.loc[(avail_data['state_long'] == state[1]), 'delta_deaths_jhu'].plot(linewidth=1, alpha=0.5, color='k', marker='x', markersize=1, label='JHU Observed Deaths')
+    d = data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].index.values
+    plt.fill_between(d, data_frame.loc[
+        (data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_1 + '_LB'], data_frame.loc[
+                         (data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_1 + '_UB'],
+                     facecolor='blue', alpha=0.2, interpolate=True)
+    data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_2 + '_EV'].plot(
+        title=state[1]+" model update", color='r', label='Model of '+date_2)
+    plt.fill_between(d, data_frame.loc[
+        (data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_2 + '_LB'], data_frame.loc[
+                         (data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_2 + '_UB'],
+                     facecolor='red', alpha=0.2, interpolate=True)
+    ax.legend()
+    if not os.path.exists('data/results/comparisons'):
+        os.makedirs('data/results/comparisons')
+    #plt.savefig('data/results/comparisons/' + state[1] + '_all.pdf')
+    plt.savefig('data/results/comparisons/' + state[1] + '_all.png')
+
+# All datapoints
+pred_dates = ["2020-03-29"]
+for pred_date in pred_dates:
+    for state in usa_states:
+        fig, ax = plt.subplots()
+        data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_EV'].plot(title=state[1]+" - predicted on "+pred_date)
+        # data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].plot(marker='x', linewidth=0)
+        avail_data = data_frame
+        avail_data.loc[(avail_data['state_long'] == state[1]), 'delta_deaths_jhu'].plot(linewidth=1, alpha=0.5, color='k')
+        d = data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].index.values
+        plt.fill_between(d, data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_LB'], data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_UB'], facecolor='blue', alpha=0.2, interpolate=True)
+        ax.set_ylim(0, state[2])
+        if not os.path.exists('data/results/all_data'):
+            os.makedirs('data/results/all_data')
+        #plt.savefig('data/results/all_data/'+state[1]+'_'+pred_date+'_all.pdf')
+        plt.savefig('data/results/all_data/' + state[1] + '_' + pred_date + '_all.png')
+
+# Incrementally add datapoints
+pred_dates = ["2020-03-29", "2020-03-30", "2020-03-31"]
+for pred_date in pred_dates:
+    for state in usa_states:
+        fig, ax = plt.subplots()
+        data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_EV'].plot(title=state[1]+" - predicted on "+pred_date)
+        # data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].plot(marker='x', linewidth=0)
+        avail_data = data_frame[data_frame.index <= pd.to_datetime(pred_date)]
+        avail_data.loc[(avail_data['state_long'] == state[1]), 'delta_deaths_jhu'].plot(linewidth=1, alpha=0.5)
+        d = data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_jhu'].index.values
+        plt.fill_between(d, data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_LB'], data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_'+pred_date+'_UB'], facecolor='blue', alpha=0.2, interpolate=True)
+        ax.set_ylim(0, state[2])
+        if not os.path.exists('data/results/incremental/'):
+            os.makedirs('data/results/incremental/')
+        #plt.savefig('data/results/incremental/'+state[1]+'_'+pred_date+'.pdf')
+        plt.savefig('data/results/incremental/' + state[1] + '_' + pred_date + '.png')
+
 
 n_lookahead_evaluations = 7
 # Calculate percentage inside, above and bellow for every prediction and day

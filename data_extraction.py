@@ -19,7 +19,7 @@ from io import StringIO
 
 
 class DataExtractor:
-    def __init__(self, predictions_url, ground_truth_url, target_directory = 'data/'):
+    def __init__(self, predictions_url, ground_truth_url, target_directory='data/'):
         self.predictions_url = predictions_url
         self.ground_truth_url = ground_truth_url
         self.target_directory = target_directory
@@ -102,74 +102,113 @@ class DataExtractor:
                 return
             else:
                 print("New data found.")
-                #zip_ref.extractall(self.target_directory)
+                zip_ref.extractall(self.target_directory)
 
     def download_ground_truth(self):
-        if self.ground_truth_url == "http://coronavirusapi.com/getTimeSeries/":
-            # Find oldest CSV file to extract GT time series
-            oldest_filename = "2020_04_01.2"
-            temp_df = pd.read_csv(self.target_directory + oldest_filename + '/Hospitalization_all_locs.csv')
-            date_format = "%Y-%m-%d"
-            temp_df['date'] = pd.to_datetime(temp_df['date'], format=date_format)
-            temp_df.index = temp_df['date']
+        # Load all csv files as dataframes with their respective date as a tuple.
+        prediction_datasets = []
+        latest_file = pd.to_datetime("2000-01-01")
+        latest_filename = []
+        dir_contents = os.listdir(self.target_directory)
+        filename_date_format = "%Y_%m_%d"
+        for element in dir_contents:
+            # Check if element string starts with 2020
+            if "2020" in element:
+                print("Reading dataset for predictions on :"+element)
+                filename_predicted_on = pd.to_datetime(element[:10], format=filename_date_format)
+                if filename_predicted_on > latest_file:
+                    latest_file = filename_predicted_on
+                    latest_filename = element
+                # Open file containing predictions for that specific day
+                temp_df = pd.read_csv(self.target_directory+element+'/Hospitalization_all_locs.csv')
+                # Change date column from string to actual date format
+                date_format = "%Y-%m-%d"
+                if "2020_03_30" in element or "2020_03_29" in element:
+                    date_format = "%m/%d/%Y"
+                temp_df.index = pd.to_datetime(temp_df['date'], format=date_format)
+                temp_df.drop(columns="date")
+                prediction_datasets.append((filename_predicted_on, temp_df))
 
-            nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-            nyt_r = requests.get(nyt_path, stream=True)
-            nytimes_df = pd.read_csv(StringIO(nyt_r.text))
-            date_format = "%Y-%m-%d"
-            nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
-            nytimes_df.index = nytimes_df['date']
+        # Find oldest CSV file to extract GT time series
+        oldest_filename = latest_filename
+        ihme_latest_df = pd.read_csv(self.target_directory + oldest_filename + '/Hospitalization_all_locs.csv')
+        date_format = "%Y-%m-%d"
+        ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
+        ihme_latest_df.index = ihme_latest_df['date']
 
-            # John Hopkins University is different format, for each state there are multiple columns.
-            jhu_path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
-            jhu_r = requests.get(jhu_path, stream=True)
-            jhu_df = pd.read_csv(StringIO(jhu_r.text))
-            jhu_date_format = "%m/%d/%y"
+        print('Extracting New York Times Data')
+        nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+        nyt_r = requests.get(nyt_path, stream=True)
+        nytimes_df = pd.read_csv(StringIO(nyt_r.text))
+        date_format = "%Y-%m-%d"
+        nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
+        nytimes_df.index = nytimes_df['date']
 
-            for state in self.usa_states:
-                print('Downloading state data for '+state[1])
-                full_path = self.ground_truth_url+state[0]
-                r = requests.get(full_path, stream=True)
-                state_df = pd.read_csv(StringIO(r.text))
-                try:
-                    state_df['datetime'] = pd.to_datetime(state_df['seconds_since_Epoch'], unit='s')
-                    state_df.index = state_df['datetime']
-                    state_df = state_df.drop(columns=['seconds_since_Epoch', 'datetime'])
-                    state_df = state_df.resample('D').max()
-                    state_df = state_df.fillna(method='ffill')
-                    state_df = state_df.fillna(0)
-                    #Calculate deltas
-                    state_df_diff = state_df.diff()
-                    state_df_diff = state_df_diff.fillna(0)
-                    state_df_diff = state_df_diff.rename(columns={"tested": "delta_tested", "positive": "delta_positive", "deaths": "delta_deaths_api"})
-                    state_df = pd.merge(state_df, state_df_diff, how='inner', left_index=True, right_index=True)
-                    state_df['state_short'] = state[0]
-                    state_df['state_long'] = state[1]
+        # John Hopkins University is different format, for each state there are multiple columns.
+        print('Extracting John Hopkins University Data')
+        jhu_path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+        jhu_r = requests.get(jhu_path, stream=True)
+        jhu_df = pd.read_csv(StringIO(jhu_r.text))
+        jhu_date_format = "%m/%d/%y"
 
-                    original_state_df = temp_df[temp_df["location"] == state[1]]
-                    state_df['delta_deaths_ihme'] = original_state_df.loc[state_df.index]['deaths_mean']
+        for state in self.usa_states:
+            print('Extracting state data for '+state[1])
+            state_df = pd.DataFrame()
+            state_df['date'] = pd.date_range(start=min(ihme_latest_df.index), end=max(ihme_latest_df.index))
+            state_df.index = state_df['date']
+            state_df = state_df.drop(columns=['date'])
+            state_df['state_short'] = state[0]
+            state_df['state_long'] = state[1]
+            try:
+                # IHME Ground Truth Data
+                original_state_df = ihme_latest_df[ihme_latest_df["location"] == state[1]]
+                original_state_df = original_state_df[original_state_df.index < pd.to_datetime("2020-04-04")]
+                state_df['delta_deaths_ihme'] = original_state_df.loc[state_df.index]['deaths_mean']
 
-                    nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
-                    nytimes_df_tmp = nytimes_df_tmp.drop(columns=['date', 'state'])
-                    nytimes_df_tmp = nytimes_df_tmp.diff()
-                    nytimes_df_tmp = nytimes_df_tmp.fillna(0)
-                    nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
-                    state_df['delta_deaths_nyt'] = nytimes_df_tmp.loc[state_df.index]['delta_deaths']
+                # New York Times Data
+                nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
+                nytimes_df_tmp = nytimes_df_tmp.drop(columns=['date', 'state'])
+                nytimes_df_tmp = nytimes_df_tmp.diff()
+                nytimes_df_tmp = nytimes_df_tmp.fillna(0)
+                nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
+                state_df['delta_deaths_nyt'] = nytimes_df_tmp.loc[state_df.index]['delta_deaths']
 
-                    #Extract JHU Data
-                    jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
-                    #Sum per state, and filter for the dates containing 2020 as /20
-                    jhu_sum_series = jhu_tmp.sum(axis=0).filter(like='/20')
-                    jhu_sum_series = jhu_sum_series.diff()
-                    jhu_sum_series = jhu_sum_series.fillna(0)
-                    jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
-                    state_df['delta_deaths_jhu'] = jhu_sum_series.loc[state_df.index]
+                # Extract JHU Data
+                jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
+                #Sum per state, and filter for the dates containing 2020 as /20
+                jhu_sum_series = jhu_tmp.sum(axis=0).filter(like='/20')
+                jhu_sum_series = jhu_sum_series.diff()
+                jhu_sum_series = jhu_sum_series.fillna(0)
+                jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
+                state_df['delta_deaths_jhu'] = jhu_sum_series.loc[state_df.index]
 
-                    self.data = self.data.append(state_df, sort=True)
-                except KeyError:
-                    print("Captured Key Error")
-        else:
-            print('Data from existing source.')
+                for prediction_dataset in prediction_datasets:
+                    date_of_prediction = prediction_dataset[0]
+                    data_frame = prediction_dataset[1]
+                    data_frame_tmp = data_frame[data_frame["location"] == state[1]]
+                    data_frame_tmp = data_frame_tmp[data_frame_tmp.index > date_of_prediction]
+                    name_str = 'delta_deaths_ihme_pred_' + date_of_prediction.strftime(format='%Y-%m-%d')
+                    state_df[name_str + '_EV'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_mean']
+                    state_df[name_str + '_LB'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_lower']
+                    state_df[name_str + '_UB'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_upper']
+                    state_df[name_str + '_error'] = state_df['delta_deaths_jhu'] - state_df['delta_deaths_ihme_pred_' + date_of_prediction.strftime(format='%Y-%m-%d') + '_EV']
+                    state_df[name_str + '_inside'] = np.nan
+                    state_df[name_str + '_outside_by'] = np.nan
+                    #Inside
+                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str+'_LB']) & (state_df['delta_deaths_jhu'] <= state_df[name_str+'_UB']),name_str+'_inside'] = 1
+                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str + '_LB']) & (
+                                state_df['delta_deaths_jhu'] <= state_df[name_str + '_UB']), name_str + '_inside_detail'] = 'Inside'
+                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str + '_LB']) & (state_df['delta_deaths_jhu'] <= state_df[name_str + '_UB']),name_str + '_outside_by'] = 0
+                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']) | (state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']),name_str + '_inside'] = 0
+                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']), name_str + '_outside_by'] = state_df['delta_deaths_jhu'] - state_df[name_str + '_LB']
+                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']), name_str + '_inside_detail'] = "Below"
+                    state_df.loc[(state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']), name_str + '_outside_by'] = state_df['delta_deaths_jhu'] - state_df[name_str + '_UB']
+                    state_df.loc[(state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']), name_str + '_inside_detail'] = "Above"
+
+
+                self.data = self.data.append(state_df, sort=True)
+            except KeyError:
+                print("Captured Key Error")
 
     def save_data(self):
         self.data.to_csv(self.target_directory+'all_data.csv')
@@ -188,6 +227,26 @@ class DataExtractor:
         # This function will return three values, a dictionary, with EV (Expected Value), LB (Lower Bound) and UB (Upper Bound)
 
     def fetch_historical_predictions(self):
+        # Load all csv files as dataframes with their respective date as a tuple.
+        prediction_datasets = []
+        dir_contents = os.listdir(self.target_directory)
+        for element in dir_contents:
+            # Check if element string starts with 2020
+            if "2020" in element:
+                print("Reading dataset for predictions on :"+element)
+                filename_date_format = "%Y_%m_%d"
+                filename_predicted_on = pd.to_datetime(element[:10], format=filename_date_format)
+                # Open file containing predictions for that specific day
+                temp_df = pd.read_csv(self.target_directory+element+'/Hospitalization_all_locs.csv')
+                # Change date column from string to actual date format
+                date_format = "%Y-%m-%d"
+                if "2020_03_30" in element or "2020_03_29" in element:
+                    date_format = "%m/%d/%Y"
+                temp_df.index = pd.to_datetime(temp_df['date'], format=date_format)
+                temp_df.drop(columns="date")
+
+                prediction_datasets.append((element, temp_df))
+
         # for each row in the Ground Truth data, search for up to X day lookahead of historical predictions.
         # Create prediction columns in the data
         for pred_idx in range(1, self.n_lookahead_evaluations+1):
@@ -205,22 +264,6 @@ class DataExtractor:
             self.data[inside_column_title] = np.nan
             self.data[inside_detail_column_title] = ''
             self.data[outside_by_column_title] = np.nan
-
-        # Load all csv files as dataframes with their respective date as a tuple.
-        prediction_datasets = []
-        dir_contents = os.listdir(self.target_directory)
-        for element in dir_contents:
-            # Check if element string starts with 2020
-            if "2020" in element:
-                print("Reading dataset for predictions on :"+element)
-                # Open file containing predictions for that specific day
-                temp_df = pd.read_csv(self.target_directory+element+'/Hospitalization_all_locs.csv')
-                # Change date column from string to actual date format
-                date_format = "%Y-%m-%d"
-                if "2020_03_30" in element or "2020_03_29" in element:
-                    date_format = "%m/%d/%Y"
-                temp_df['date'] = pd.to_datetime(temp_df['date'],format=date_format).dt.date
-                prediction_datasets.append((element, temp_df))
 
         for index, row in self.data.iterrows():
             print(str(row["state_long"])+"\t -"+str(index))
@@ -260,7 +303,7 @@ class DataExtractor:
             self.download_predictions()
             self.download_ground_truth()
             # Append predictions to ground truth data
-            self.fetch_historical_predictions()
+#            self.fetch_historical_predictions()
 
             self.save_data()
             print("Sleeping")
