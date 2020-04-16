@@ -76,7 +76,7 @@ data_frame = data_frame.sort_index()
 # Comparison prediction
 for state in usa_states:
     fig, ax = plt.subplots()
-    date_1 = "2020-03-29"
+    date_1 = "2020-04-01"
     date_2 = "2020-04-03"
     data_frame.loc[(data_frame['state_long'] == state[1]), 'delta_deaths_ihme_pred_' + date_1 + '_EV'].plot(
         title=state[1]+" model update", color='b', label='Model of '+date_1)
@@ -97,8 +97,10 @@ for state in usa_states:
     ax.legend()
     if not os.path.exists('data/results/comparisons'):
         os.makedirs('data/results/comparisons')
-    #plt.savefig('data/results/comparisons/' + state[1] + '_all.pdf')
-    plt.savefig('data/results/comparisons/' + state[1] + '_all.png')
+    #saving_filename = 'data/results/comparisons/' + state[1] + '_all.pdf'
+    saving_filename = 'data/results/comparisons/' + state[1] + '_all.png'
+    plt.savefig(saving_filename)
+    print("Saving image to :"+saving_filename)
 
 # All datapoints
 pred_dates = ["2020-03-29"]
@@ -114,11 +116,13 @@ for pred_date in pred_dates:
         ax.set_ylim(0, state[2])
         if not os.path.exists('data/results/all_data'):
             os.makedirs('data/results/all_data')
-        #plt.savefig('data/results/all_data/'+state[1]+'_'+pred_date+'_all.pdf')
-        plt.savefig('data/results/all_data/' + state[1] + '_' + pred_date + '_all.png')
+        #saving_filename = 'data/results/all_data/'+state[1]+'_'+pred_date+'_all.pdf'
+        saving_filename = 'data/results/all_data/' + state[1] + '_' + pred_date + '_all.png'
+        plt.savefig(saving_filename)
+        print("Saving image to :" + saving_filename)
 
 # Incrementally add datapoints
-pred_dates = ["2020-03-29", "2020-03-30", "2020-03-31"]
+pred_dates = ["2020-03-29", "2020-03-30", "2020-03-31", "2020-04-01", "2020-04-03", "2020-04-07", "2020-04-12"]
 for pred_date in pred_dates:
     for state in usa_states:
         fig, ax = plt.subplots()
@@ -131,8 +135,10 @@ for pred_date in pred_dates:
         ax.set_ylim(0, state[2])
         if not os.path.exists('data/results/incremental/'):
             os.makedirs('data/results/incremental/')
-        #plt.savefig('data/results/incremental/'+state[1]+'_'+pred_date+'.pdf')
-        plt.savefig('data/results/incremental/' + state[1] + '_' + pred_date + '.png')
+        #saving_filename = 'data/results/incremental/'+state[1]+'_'+pred_date+'.pdf'
+        saving_filename = 'data/results/incremental/' + state[1] + '_' + pred_date + '.png'
+        plt.savefig(saving_filename)
+        print("Saving image to :" + saving_filename)
 
 
 n_lookahead_evaluations = 7
@@ -143,7 +149,7 @@ for date in data_frame.index.unique():
     for lookahead in range(1, n_lookahead_evaluations+1):
         column_name = 'deaths_pred_'+str(lookahead)+'_outside_by'
         if this_date_df.count()[column_name] == 0:
-            new_row_dict = {'date': date, 'percentage_inside': np.nan, 'percentage_below': np.nan, 'percentage_above': np.nan, 'lookahead':lookahead}
+            new_row_dict = {'date': date, 'percentage_inside': np.nan, 'percentage_below': np.nan, 'percentage_above': np.nan, 'lookahead': lookahead}
             new_row = pd.Series(new_row_dict)
             performance_statistics = performance_statistics.append(new_row, ignore_index=True)
         else:

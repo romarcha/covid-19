@@ -9,140 +9,162 @@ __maintainer__ = "Roman Marchant"
 __email__ = "roman.marchant@sydney.edu.au"
 
 import requests
-import zipfile
 import os
 import datetime
-import time
 import pandas as pd
 import numpy as np
 from io import StringIO
+from defs import *
 
 
-class DataExtractor:
-    def __init__(self, predictions_url, ground_truth_url, target_directory='data/'):
-        self.predictions_url = predictions_url
-        self.ground_truth_url = ground_truth_url
-        self.target_directory = target_directory
-        if not os.path.exists(self.target_directory):
-            os.makedirs(self.target_directory)
-        if not os.path.exists(self.target_directory+'raw_data/'):
-            os.makedirs(self.target_directory+'raw_data/')
-        self.chunk_size = 128
-        self.data_extraction_period = 60*10 # every 10 minutes
-        self.usa_states = [('AK', 'Alaska'),
-                           ('AL', 'Alabama'),
-                           ('AR', 'Arkansas'),
-                           ('AZ', 'Arizona'),
-                           ('CA', 'California'),
-                           ('CO', 'Colorado'),
-                           ('CT', 'Connecticut'),
-                           ('DC', 'District of Columbia'),
-                           ('DE', 'Delaware'),
-                           ('FL', 'Florida'),
-                           ('GA', 'Georgia'),
-                           ('HI', 'Hawaii'),
-                           ('IA', 'Iowa'),
-                           ('ID', 'Idaho'),
-                           ('IL', 'Illinois'),
-                           ('IN', 'Indiana'),
-                           ('KS', 'Kansas'),
-                           ('KY', 'Kentucky'),
-                           ('LA', 'Louisiana'),
-                           ('MA', 'Massachusetts'),
-                           ('MD', 'Maryland'),
-                           ('ME', 'Maine'),
-                           ('MI', 'Michigan'),
-                           ('MN', 'Minnesota'),
-                           ('MO', 'Missouri'),
-                           ('MS', 'Mississippi'),
-                           ('MT', 'Montana'),
-                           ('NC', 'North Carolina'),
-                           ('ND', 'North Dakota'),
-                           ('NE', 'Nebraska'),
-                           ('NH', 'New Hampshire'),
-                           ('NJ', 'New Jersey'),
-                           ('NM', 'New Mexico'),
-                           ('NV', 'Nevada'),
-                           ('NY', 'New York'),
-                           ('OH', 'Ohio'),
-                           ('OK', 'Oklahoma'),
-                           ('OR', 'Oregon'),
-                           ('PA', 'Pennsylvania'),
-                           ('RI', 'Rhode Island'),
-                           ('SC', 'South Carolina'),
-                           ('SD', 'South Dakota'),
-                           ('TN', 'Tennessee'),
-                           ('TX', 'Texas'),
-                           ('UT', 'Utah'),
-                           ('VA', 'Virginia'),
-                           ('VT', 'Vermont'),
-                           ('WA', 'Washington'),
-                           ('WI', 'Wisconsin'),
-                           ('WV', 'West Virginia'),
-                           ('WY', 'Wyoming')]
-        self.data = pd.DataFrame()
-        self.n_lookahead_evaluations = 7
+class PredictionDataset:
+    def __init__(self, last_observation_date, data_frame):
+        self.last_observation_date = last_observation_date
+        # Only keep predictions and not historical observational data
+        self.df = data_frame[data_frame.index > last_observation_date]
+        self.processed_df = pd.DataFrame()
 
-    def download_predictions(self):
-        # Checks the current date time, and adds that current date time to the downloaded zip file
-        datetime_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        r = requests.get(self.predictions_url, stream=True)
-        output_filename = self.target_directory + "raw_data/predictions_" + datetime_str + ".zip"
-        with open(output_filename, 'wb') as fd:
-            for chunk in r.iter_content(chunk_size=self.chunk_size):
-                fd.write(chunk)
+    def prediction_for_location(self, location):
+        return self.df[self.df['location'] == location]
 
-        # Extract zip file.
-        with zipfile.ZipFile(output_filename, 'r') as zip_ref:
-            file_list = zip_ref.filelist # File list contains a list of all zip file contents
-            # Only extract if contents don't already exist in self.target_directory
-            if os.path.exists(self.target_directory+file_list[0].filename):
-                print('Data was previously downloaded, discarding.')
-                os.remove(output_filename)
-                return
+    def evaluate_performance(self, gt_data):
+        first = True
+        for state in usa_states:
+            aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
+            state_df = self.df[self.df['location'] == state[1]]
+            performance_df = pd.DataFrame()
+            performance_df['ev'] =  state_df.loc[aux_gt_df.index]['deaths_mean']
+            performance_df['lb'] = state_df.loc[aux_gt_df.index]['deaths_lower']
+            performance_df['ub'] = state_df.loc[aux_gt_df.index]['deaths_upper']
+            performance_df['gt'] = aux_gt_df['delta_deaths_jhu']
+            performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.loc[aux_gt_df.index]['deaths_mean']
+            # Check if inside, below or above bounds
+            performance_df = performance_df.dropna()
+
+            performance_df['within_PI'] = ""
+            performance_df['outside_by'] = np.nan
+            performance_df['last_obs_date'] = self.last_observation_date
+
+            performance_df.loc[performance_df['gt'] > performance_df['ub'], 'within_PI'] = "above"
+            performance_df.loc[performance_df['gt'] > performance_df['ub'], 'outside_by'] = performance_df['gt'] - performance_df['ub']
+
+            performance_df.loc[performance_df['gt'] < performance_df['lb'],'within_PI'] = "below"
+            performance_df.loc[performance_df['gt'] < performance_df['lb'], 'outside_by'] = performance_df['gt'] - performance_df['lb']
+
+            performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']),'within_PI'] = "inside"
+            performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']), 'outside_by'] = 0
+
+            performance_df['state_long'] = state[1]
+            performance_df['state_short'] = state[0]
+            performance_df['lookahead'] = (performance_df.index - self.last_observation_date).days
+            if first:
+                self.processed_df = performance_df
+                first = False
             else:
-                print("New data found.")
-                zip_ref.extractall(self.target_directory)
+                self.processed_df = self.processed_df.append(performance_df)
 
-    def download_ground_truth(self):
-        # Load all csv files as dataframes with their respective date as a tuple.
-        prediction_datasets = []
+
+class CovidPredictionEvaluator:
+    def __init__(self, model_directory):
+        # Model directory contains the data of predictions by the model.
+        self.model_directory = model_directory
+        # It is up to the user to move the prediction datasets to be moved to specific directory.
+        
+        # If directory does not exist then evaluator cannot evaluate anything.
+        if not os.path.exists(self.model_directory):
+            raise BaseException("Directory for this model does not exist.")
+
+        self.datasets = []
+        self.gt_data = pd.DataFrame()
+        self.all_data = pd.DataFrame()
+        self.organise_data()
+        self.evaluate_datasets()
+        self.calculate_performance()
+        print('Finished initialising model evaluation.')
+
+    def calculate_performance(self):
+        for lookahead in range(1, 5):
+            lookahead_data = self.all_data[self.all_data['lookahead'] == lookahead]
+            lookahead_data['range'] = lookahead_data['ub']-lookahead_data['lb']
+            n_inside = lookahead_data[lookahead_data['within_PI'] == 'inside']['within_PI'].count()
+            n_below = lookahead_data[lookahead_data['within_PI'] == 'below']['within_PI'].count()
+            n_above = lookahead_data[lookahead_data['within_PI'] == 'above']['within_PI'].count()
+            avg_range = lookahead_data['range'].mean()
+            rmse = np.sqrt((lookahead_data['error'] ** 2).mean())
+            n_total = n_inside + n_below + n_above
+            perc_inside = 100 * n_inside / n_total
+            perc_below = 100 * n_below / n_total
+            perc_above = 100 * n_above / n_total
+            print('Just Lookahead: ' + str(lookahead) + 'RMSE = ' + str(rmse)+ ' Range '+ str(avg_range) + ' (' + str(perc_inside) + ',' + str(
+                perc_below) + ',' + str(perc_above) + ')')
+
+        for dataset in self.datasets:
+            last_obs_date = dataset.last_observation_date
+            for lookahead in range(1,5):
+                lookahead_data = self.all_data[(self.all_data['lookahead'] == lookahead) & (self.all_data['last_obs_date'] == last_obs_date)]
+                n_inside = lookahead_data[lookahead_data['within_PI'] == 'inside']['within_PI'].count()
+                n_below = lookahead_data[lookahead_data['within_PI'] == 'below']['within_PI'].count()
+                n_above = lookahead_data[lookahead_data['within_PI'] == 'above']['within_PI'].count()
+                n_total = n_inside + n_below + n_above
+                perc_inside = 100* n_inside / n_total
+                perc_below = 100 * n_below/ n_total
+                perc_above = 100 * n_above / n_total
+                print(str(last_obs_date)+' Lookahead = '+str(lookahead)+' ('+str(perc_inside)+','+str(perc_below)+','+str(perc_above)+')')
+                #lookahead_data.groupby('last_obs_date')
+                #percentage_inside = lookahead_data
+
+    def organise_data(self):
+        # Load all csv files with their respective last observation date.
+
+        # Initialise latest file to early date
         latest_file = pd.to_datetime("2000-01-01")
+
         latest_filename = []
-        dir_contents = os.listdir(self.target_directory)
+        dir_contents = os.listdir(self.model_directory)
+
         filename_date_format = "%Y_%m_%d"
         for element in dir_contents:
             # Check if element string starts with 2020
             if "2020" in element:
                 print("Reading dataset for predictions on :"+element)
-                filename_predicted_on = pd.to_datetime(element[:10], format=filename_date_format)
-                if filename_predicted_on > latest_file:
-                    latest_file = filename_predicted_on
+                last_observation_on = pd.to_datetime(element[:10], format=filename_date_format)
+                if last_observation_on > latest_file:
+                    latest_file = last_observation_on
                     latest_filename = element
                 # Open file containing predictions for that specific day
-                temp_df = pd.read_csv(self.target_directory+element+'/Hospitalization_all_locs.csv')
+                temp_df = pd.read_csv(self.model_directory+element+'/Hospitalization_all_locs.csv')
                 # Change date column from string to actual date format
                 date_format = "%Y-%m-%d"
+                # Some datasets were preprocessed by third party so changed format of dates
                 if "2020_03_30" in element or "2020_03_29" in element:
                     date_format = "%m/%d/%Y"
                 temp_df.index = pd.to_datetime(temp_df['date'], format=date_format)
-                temp_df.drop(columns="date")
-                prediction_datasets.append((filename_predicted_on, temp_df))
+                # Check if file contains location as name, if not turn location_name to location
+                if 'location' not in temp_df:
+                    if 'location_name' in temp_df:
+                        temp_df = temp_df.rename(columns ={'location_name':'location'})
+                temp_df = temp_df[['location', 'deaths_mean', 'deaths_lower', 'deaths_upper']]
+                prediction_dataset = PredictionDataset(last_observation_date=last_observation_on,data_frame=temp_df)
+                self.datasets.append(prediction_dataset)
 
-        # Find oldest CSV file to extract GT time series
-        oldest_filename = latest_filename
-        ihme_latest_df = pd.read_csv(self.target_directory + oldest_filename + '/Hospitalization_all_locs.csv')
-        date_format = "%Y-%m-%d"
-        ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
-        ihme_latest_df.index = ihme_latest_df['date']
+        # Find oldest CSV file to extract GT time series of IHME
+#        oldest_filename = latest_filename
+#        ihme_latest_df = pd.read_csv(self.model_directory + oldest_filename + '/Hospitalization_all_locs.csv')
+#        date_format = "%Y-%m-%d"
+#        # Check if file contains location as name, if not turn location_name to location
+#        if 'location' not in ihme_latest_df:
+#            if 'location_name' in ihme_latest_df:
+#                ihme_latest_df = ihme_latest_df.rename(columns={'location_name': 'location'})
+#        ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
+#        ihme_latest_df.index = ihme_latest_df['date']
 
-        print('Extracting New York Times Data')
-        nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-        nyt_r = requests.get(nyt_path, stream=True)
-        nytimes_df = pd.read_csv(StringIO(nyt_r.text))
-        date_format = "%Y-%m-%d"
-        nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
-        nytimes_df.index = nytimes_df['date']
+#        print('Extracting New York Times Data')
+#        nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+#        nyt_r = requests.get(nyt_path, stream=True)
+#        nytimes_df = pd.read_csv(StringIO(nyt_r.text))
+#        date_format = "%Y-%m-%d"
+#        nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
+#        nytimes_df.index = nytimes_df['date']
 
         # John Hopkins University is different format, for each state there are multiple columns.
         print('Extracting John Hopkins University Data')
@@ -151,28 +173,15 @@ class DataExtractor:
         jhu_df = pd.read_csv(StringIO(jhu_r.text))
         jhu_date_format = "%m/%d/%y"
 
-        for state in self.usa_states:
+        for state in usa_states:
             print('Extracting state data for '+state[1])
             state_df = pd.DataFrame()
-            state_df['date'] = pd.date_range(start=min(ihme_latest_df.index), end=max(ihme_latest_df.index))
+            state_df['date'] = pd.date_range(start=pd.to_datetime("2020-01-01"), end=pd.to_datetime("2020-12-31"))
             state_df.index = state_df['date']
             state_df = state_df.drop(columns=['date'])
             state_df['state_short'] = state[0]
             state_df['state_long'] = state[1]
             try:
-                # IHME Ground Truth Data
-                original_state_df = ihme_latest_df[ihme_latest_df["location"] == state[1]]
-                original_state_df = original_state_df[original_state_df.index < pd.to_datetime("2020-04-04")]
-                state_df['delta_deaths_ihme'] = original_state_df.loc[state_df.index]['deaths_mean']
-
-                # New York Times Data
-                nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
-                nytimes_df_tmp = nytimes_df_tmp.drop(columns=['date', 'state'])
-                nytimes_df_tmp = nytimes_df_tmp.diff()
-                nytimes_df_tmp = nytimes_df_tmp.fillna(0)
-                nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
-                state_df['delta_deaths_nyt'] = nytimes_df_tmp.loc[state_df.index]['delta_deaths']
-
                 # Extract JHU Data
                 jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
                 #Sum per state, and filter for the dates containing 2020 as /20
@@ -182,36 +191,24 @@ class DataExtractor:
                 jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
                 state_df['delta_deaths_jhu'] = jhu_sum_series.loc[state_df.index]
 
-                for prediction_dataset in prediction_datasets:
-                    date_of_prediction = prediction_dataset[0]
-                    data_frame = prediction_dataset[1]
-                    data_frame_tmp = data_frame[data_frame["location"] == state[1]]
-                    data_frame_tmp = data_frame_tmp[data_frame_tmp.index > date_of_prediction]
-                    name_str = 'delta_deaths_ihme_pred_' + date_of_prediction.strftime(format='%Y-%m-%d')
-                    state_df[name_str + '_EV'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_mean']
-                    state_df[name_str + '_LB'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_lower']
-                    state_df[name_str + '_UB'] = data_frame_tmp.loc[data_frame_tmp.index]['deaths_upper']
-                    state_df[name_str + '_error'] = state_df['delta_deaths_jhu'] - state_df['delta_deaths_ihme_pred_' + date_of_prediction.strftime(format='%Y-%m-%d') + '_EV']
-                    state_df[name_str + '_inside'] = np.nan
-                    state_df[name_str + '_outside_by'] = np.nan
-                    #Inside
-                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str+'_LB']) & (state_df['delta_deaths_jhu'] <= state_df[name_str+'_UB']),name_str+'_inside'] = 1
-                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str + '_LB']) & (
-                                state_df['delta_deaths_jhu'] <= state_df[name_str + '_UB']), name_str + '_inside_detail'] = 'Inside'
-                    state_df.loc[(state_df['delta_deaths_jhu'] >= state_df[name_str + '_LB']) & (state_df['delta_deaths_jhu'] <= state_df[name_str + '_UB']),name_str + '_outside_by'] = 0
-                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']) | (state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']),name_str + '_inside'] = 0
-                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']), name_str + '_outside_by'] = state_df['delta_deaths_jhu'] - state_df[name_str + '_LB']
-                    state_df.loc[(state_df['delta_deaths_jhu'] < state_df[name_str + '_LB']), name_str + '_inside_detail'] = "Below"
-                    state_df.loc[(state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']), name_str + '_outside_by'] = state_df['delta_deaths_jhu'] - state_df[name_str + '_UB']
-                    state_df.loc[(state_df['delta_deaths_jhu'] > state_df[name_str + '_UB']), name_str + '_inside_detail'] = "Above"
+                self.gt_data = self.gt_data.append(state_df, sort=True)
 
-
-                self.data = self.data.append(state_df, sort=True)
             except KeyError:
                 print("Captured Key Error")
+        self.gt_data = self.gt_data.dropna()
+
+    def evaluate_datasets(self):
+        first = True
+        for prediction_dataset in self.datasets:
+            prediction_dataset.evaluate_performance(self.gt_data)
+            if first:
+                self.all_data = prediction_dataset.processed_df
+                first = False
+            else:
+                self.all_data = self.all_data.append(prediction_dataset.processed_df)
 
     def save_data(self):
-        self.data.to_csv(self.target_directory+'all_data.csv')
+        self.data.to_csv(self.model_directory+'all_data.csv')
 
     def get_death_prediction(self, date_predicted, state, data_frame):
         try:
@@ -229,7 +226,7 @@ class DataExtractor:
     def fetch_historical_predictions(self):
         # Load all csv files as dataframes with their respective date as a tuple.
         prediction_datasets = []
-        dir_contents = os.listdir(self.target_directory)
+        dir_contents = os.listdir(self.model_directory)
         for element in dir_contents:
             # Check if element string starts with 2020
             if "2020" in element:
@@ -237,7 +234,7 @@ class DataExtractor:
                 filename_date_format = "%Y_%m_%d"
                 filename_predicted_on = pd.to_datetime(element[:10], format=filename_date_format)
                 # Open file containing predictions for that specific day
-                temp_df = pd.read_csv(self.target_directory+element+'/Hospitalization_all_locs.csv')
+                temp_df = pd.read_csv(self.model_directory+element+'/Hospitalization_all_locs.csv')
                 # Change date column from string to actual date format
                 date_format = "%Y-%m-%d"
                 if "2020_03_30" in element or "2020_03_29" in element:
@@ -297,21 +294,7 @@ class DataExtractor:
 
         print("fetching predictions.")
 
-    def extract(self):
-        while True:
-            print("COVID-19 Data Extractor: Extracting data")
-            self.download_predictions()
-            self.download_ground_truth()
-            # Append predictions to ground truth data
-#            self.fetch_historical_predictions()
 
-            self.save_data()
-            print("Sleeping")
-            time.sleep(self.data_extraction_period)
-
-
-predictions_url = "https://ihmecovid19storage.blob.core.windows.net/latest/ihme-covid19.zip"
-#ground_truth_url = "https://ihmecovid19storage.blob.core.windows.net/latest/ihme-covid19.zip"\
-ground_truth_url = "http://coronavirusapi.com/getTimeSeries/"
-data_extractor = DataExtractor(predictions_url, ground_truth_url)
-data_extractor.extract()
+# Target directory contains data on predictions for every day.
+evaluator_1 = CovidPredictionEvaluator(model_directory='data_model_1/')
+evaluator_2 = CovidPredictionEvaluator(model_directory='data_model_2/')

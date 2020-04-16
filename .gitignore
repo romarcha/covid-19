@@ -1,3 +1,14 @@
+# Automatically generated files
+.idea/
+backupdata/
+bin/
+data/
+data*
+include/
+pip-selfcheck.json
+plots_maps.pdf
+raw_data/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -31,11 +31,11 @@ def download_predictions(predictions_url, raw_data_dir):
         file_list = zip_ref.filelist  # File list contains a list of all zip file contents
         # Only extract if contents don't already exist in self.target_directory
         if os.path.exists(raw_data_dir+file_list[0].filename):
-            print('Data was previously downloaded, discarding.')
+            print(raw_data_dir+file_list[0].filename+' already exists, discarding download.')
             os.remove(output_filename)
             return
         else:
-            print("New data found.")
+            print("New data found, writing "+file_list[0].filename)
             zip_ref.extractall(raw_data_dir)
 
 
