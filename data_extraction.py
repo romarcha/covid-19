@@ -18,14 +18,58 @@ from defs import *
 
 
 class PredictionDataset:
-    def __init__(self, last_observation_date, data_frame):
+    def __init__(self, last_observation_date, data_frame, model_name):
         self.last_observation_date = last_observation_date
         # Only keep predictions and not historical observational data
         self.df = data_frame[data_frame.index > last_observation_date]
         self.processed_df = pd.DataFrame()
+        self.model_name = model_name
+        self.starting_date = pd.to_datetime("2020-04-17")
 
     def prediction_for_location(self, location):
         return self.df[self.df['location'] == location]
+
+    def get_pi_stats(self, date):
+        # For a specific date. Get the prediction interval statistics for each state.
+        item_df = self.processed_df.loc[date]
+        n_inside = item_df[item_df['within_PI'] == 'inside']['within_PI'].count()
+        n_below = item_df[item_df['within_PI'] == 'below']['within_PI'].count()
+        n_above = item_df[item_df['within_PI'] == 'above']['within_PI'].count()
+
+        n_total = n_inside+n_below+n_above
+        if not n_total == 51:
+            print("Not 51 states in data, there are "+str(n_total))
+        result = {'n_inside': 100*n_inside/n_total, 'n_below': 100*n_below/n_total, 'n_above': 100*n_above/n_total}
+        return result
+
+    def get_stats_per_state(self):
+        # Return a list of states, with their respective area between PIs, i.e. sum over all time points
+        result = []
+        for state in usa_states:
+            state_df = self.df[self.df['location'] == state[1]]
+            state_df = state_df[state_df.index >= self.starting_date]
+            area = sum(state_df['deaths_upper'] - state_df['deaths_lower'])
+            max_val = max(state_df['deaths_mean'])
+            max_date = state_df['deaths_mean'].idxmax()
+            range_at_max = state_df.loc[max_date]['deaths_upper'] - state_df.loc[max_date]['deaths_lower']
+            result.append([state[1], area, max_val, max_date, range_at_max, self.last_observation_date, self.model_name])
+
+        df_result = pd.DataFrame(result, columns=['state', 'area_between_bounds', 'max_ev', 'date_max_ev', 'range_at_max', 'last_observation_date', 'model_name'])
+        df_result.index = df_result['state']
+        df_result = df_result.drop(columns='state')
+        return df_result
+
+    def get_max_prediction(self):
+        print("Returning max prediction date")
+        #Check per state the maximum date and maximum value
+        for state in usa_states:
+            state_df = self.df[self.df['location'] == state[1]]
+            max_val = max(state_df['deaths_mean'])
+            max_date = state_df['deaths_mean'].idxmax()
+            print("Prediction max and date: "+str(self.last_observation_date)+" "+state[1]+": "+str(max_val)+", "+str(max_date))
+        return max(self.df)
+
+
 
     def evaluate_performance(self, gt_data):
         first = True
@@ -33,17 +77,44 @@ class PredictionDataset:
             aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
             state_df = self.df[self.df['location'] == state[1]]
             performance_df = pd.DataFrame()
-            performance_df['ev'] =  state_df.loc[aux_gt_df.index]['deaths_mean']
+            performance_df['ev'] = state_df.loc[aux_gt_df.index]['deaths_mean']
             performance_df['lb'] = state_df.loc[aux_gt_df.index]['deaths_lower']
             performance_df['ub'] = state_df.loc[aux_gt_df.index]['deaths_upper']
             performance_df['gt'] = aux_gt_df['delta_deaths_jhu']
             performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.loc[aux_gt_df.index]['deaths_mean']
+
+            # Fill up all performance values with default value
+            performance_df['PE'] = np.nan
+            performance_df['Adj PE'] = np.nan
+            performance_df['APE'] = np.nan
+
+            for i, row in performance_df.iterrows():
+                if row['ev'] == 0 and row['gt'] == 0:
+                    performance_df.at[i, 'PE'] = 0
+                    performance_df.at[i, 'Adj PE'] = 0
+                elif pd.isna(row['ev']) or pd.isna('gt'):
+                    performance_df.at[i, 'PE'] = np.nan
+                    performance_df.at[i, 'Adj PE'] = np.nan
+                elif not row['ev'] == 0 and row['gt'] == 0:
+                    performance_df.at[i, 'PE'] = np.nan
+                    performance_df.at[i, 'Adj PE'] = np.nan
+                else:
+                    performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
+                    performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
+
+            performance_df['APE'] = np.abs(performance_df['PE'])
+            performance_df['Adj APE'] = np.abs(performance_df['Adj PE'])
+            performance_df['LAPE'] = 1 / (1 + np.exp(-performance_df['APE']/100))
+            performance_df['LAdj APE'] = 1 / (1 + np.exp(-performance_df['Adj APE']/100))
+
+            performance_df['last_obs_date'] = self.last_observation_date
             # Check if inside, below or above bounds
-            performance_df = performance_df.dropna()
+            #performance_df = performance_df.dropna()
 
             performance_df['within_PI'] = ""
             performance_df['outside_by'] = np.nan
             performance_df['last_obs_date'] = self.last_observation_date
+            performance_df['model_name'] = self.model_name
 
             performance_df.loc[performance_df['gt'] > performance_df['ub'], 'within_PI'] = "above"
             performance_df.loc[performance_df['gt'] > performance_df['ub'], 'outside_by'] = performance_df['gt'] - performance_df['ub']
@@ -65,9 +136,10 @@ class PredictionDataset:
 
 
 class CovidPredictionEvaluator:
-    def __init__(self, model_directory):
+    def __init__(self, model_directory, model_name):
         # Model directory contains the data of predictions by the model.
         self.model_directory = model_directory
+        self.model_name = model_name
         # It is up to the user to move the prediction datasets to be moved to specific directory.
         
         # If directory does not exist then evaluator cannot evaluate anything.
@@ -79,7 +151,7 @@ class CovidPredictionEvaluator:
         self.all_data = pd.DataFrame()
         self.organise_data()
         self.evaluate_datasets()
-        self.calculate_performance()
+#        self.calculate_performance()
         print('Finished initialising model evaluation.')
 
     def calculate_performance(self):
@@ -113,6 +185,58 @@ class CovidPredictionEvaluator:
                 #lookahead_data.groupby('last_obs_date')
                 #percentage_inside = lookahead_data
 
+    def plot_results(self):
+        # First plot consists of showing one-two-three and four steps lookahead by date on a box plot with the states.
+        init_date = pd.to_datetime("2020-03-30")
+        final_date = pd.to_datetime("2020-04-16")
+
+        # Table of percentage within, below and above PIs
+        date_range = pd.date_range(start="2020-03-30", end="2020-04-16")
+        with open(self.model_directory+'PI_table.tex', mode='w') as file_:
+            file_.write("\\begin{tabular}\n")
+            file_.write("{ | l | c | c | c | c |}\n")
+            file_.write("\\hline\n")
+            file_.write("    & 1 - step & 2 - step & 3 - step & 4 - step \\\\\n")
+            file_.write("\\hline\n")
+            for date_ in date_range:
+                print(date_)
+                date_str = date_.strftime("%B %d")
+                file_.write(date_str+" & ")
+                for lookahead_ in range(1, 5):
+                    values_str = ""
+                    dataset_date = date_ - datetime.timedelta(days=lookahead_)
+                    print("Dataset date: " + str(dataset_date))
+                    for dataset in self.datasets:
+                        if dataset.last_observation_date == dataset_date:
+                            print("Dataset Found!")
+                            pi_stats = dataset.get_pi_stats(date_)
+                            values_str = "{:.0f}".format(pi_stats['n_inside'])+"("+"{:.0f}".format(pi_stats['n_below'])+","+"{:.0f}".format(pi_stats['n_above'])+")"
+                            print(pi_stats)
+                    if lookahead_ < 4:
+                        file_.write(values_str+" & ")
+                    else:
+                        file_.write(values_str + " \\\\\n")
+            file_.write("\\hline\n")
+            file_.write("\\end{tabular}\n")
+
+    def get_all_data_as_csv(self):
+        # For each dataset
+        df_list = []
+        for dataset in self.datasets:
+            df_list.append(dataset.processed_df)
+        df_all = pd.concat(df_list)
+        df_all.to_csv(self.model_directory + 'output_data.csv')
+        print('Finished concatenating all.')
+        return df_all
+
+    def get_state_data_as_csv(self):
+        df_list = []
+        for dataset in self.datasets:
+            df_list.append(dataset.get_stats_per_state())
+        df_all = pd.concat(df_list)
+        df_all.to_csv(self.model_directory + 'output_data_per_state.csv')
+        return df_all
+
     def organise_data(self):
         # Load all csv files with their respective last observation date.
 
@@ -144,27 +268,8 @@ class CovidPredictionEvaluator:
                     if 'location_name' in temp_df:
                         temp_df = temp_df.rename(columns ={'location_name':'location'})
                 temp_df = temp_df[['location', 'deaths_mean', 'deaths_lower', 'deaths_upper']]
-                prediction_dataset = PredictionDataset(last_observation_date=last_observation_on,data_frame=temp_df)
+                prediction_dataset = PredictionDataset(last_observation_date=last_observation_on,data_frame=temp_df,model_name=self.model_name)
                 self.datasets.append(prediction_dataset)
-
-        # Find oldest CSV file to extract GT time series of IHME
-#        oldest_filename = latest_filename
-#        ihme_latest_df = pd.read_csv(self.model_directory + oldest_filename + '/Hospitalization_all_locs.csv')
-#        date_format = "%Y-%m-%d"
-#        # Check if file contains location as name, if not turn location_name to location
-#        if 'location' not in ihme_latest_df:
-#            if 'location_name' in ihme_latest_df:
-#                ihme_latest_df = ihme_latest_df.rename(columns={'location_name': 'location'})
-#        ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
-#        ihme_latest_df.index = ihme_latest_df['date']
-
-#        print('Extracting New York Times Data')
-#        nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
-#        nyt_r = requests.get(nyt_path, stream=True)
-#        nytimes_df = pd.read_csv(StringIO(nyt_r.text))
-#        date_format = "%Y-%m-%d"
-#        nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
-#        nytimes_df.index = nytimes_df['date']
 
         # John Hopkins University is different format, for each state there are multiple columns.
         print('Extracting John Hopkins University Data')
@@ -197,6 +302,12 @@ class CovidPredictionEvaluator:
                 print("Captured Key Error")
         self.gt_data = self.gt_data.dropna()
 
+    def evaluate_area_overlap_matrix(self):
+        # Evaluate the overlap in total area between one model and the rest, summed for all states.
+        for dataset_i in self.datasets:
+            for dataset_j in self.datasets:
+                overlap_val = dataset_i.overlap_with(dataset_j)
+
     def evaluate_datasets(self):
         first = True
         for prediction_dataset in self.datasets:
@@ -210,91 +321,23 @@ class CovidPredictionEvaluator:
     def save_data(self):
         self.data.to_csv(self.model_directory+'all_data.csv')
 
-    def get_death_prediction(self, date_predicted, state, data_frame):
-        try:
-            prediction = data_frame.loc[
-                    (data_frame["location"] == state) & (data_frame["date"] == date_predicted.date())]
-        except:
-            print('Prediction Fetch Failed')
-        # Check if prediction was found
-        result = []
-        if len(prediction) == 1:
-            result = {'EV': prediction['deaths_mean'], 'UB': prediction['deaths_upper'], 'LB': prediction['deaths_lower']}
-        return result
-        # This function will return three values, a dictionary, with EV (Expected Value), LB (Lower Bound) and UB (Upper Bound)
-
-    def fetch_historical_predictions(self):
-        # Load all csv files as dataframes with their respective date as a tuple.
-        prediction_datasets = []
-        dir_contents = os.listdir(self.model_directory)
-        for element in dir_contents:
-            # Check if element string starts with 2020
-            if "2020" in element:
-                print("Reading dataset for predictions on :"+element)
-                filename_date_format = "%Y_%m_%d"
-                filename_predicted_on = pd.to_datetime(element[:10], format=filename_date_format)
-                # Open file containing predictions for that specific day
-                temp_df = pd.read_csv(self.model_directory+element+'/Hospitalization_all_locs.csv')
-                # Change date column from string to actual date format
-                date_format = "%Y-%m-%d"
-                if "2020_03_30" in element or "2020_03_29" in element:
-                    date_format = "%m/%d/%Y"
-                temp_df.index = pd.to_datetime(temp_df['date'], format=date_format)
-                temp_df.drop(columns="date")
-
-                prediction_datasets.append((element, temp_df))
-
-        # for each row in the Ground Truth data, search for up to X day lookahead of historical predictions.
-        # Create prediction columns in the data
-        for pred_idx in range(1, self.n_lookahead_evaluations+1):
-            ev_column_title = 'deaths_pred_' + str(pred_idx) + '_EV'
-            ub_column_title = 'deaths_pred_' + str(pred_idx) + '_UB'
-            lb_column_title = 'deaths_pred_' + str(pred_idx) + '_LB'
-            error_column_title = 'deaths_pred_' + str(pred_idx) + '_error'
-            inside_column_title = 'deaths_pred_' + str(pred_idx) + '_inside'
-            inside_detail_column_title = 'deaths_pred_' + str(pred_idx) + '_inside_detail'
-            outside_by_column_title = 'deaths_pred_' + str(pred_idx) + '_outside_by'
-            self.data[ev_column_title] = np.nan
-            self.data[ub_column_title] = np.nan
-            self.data[lb_column_title] = np.nan
-            self.data[error_column_title] = np.nan
-            self.data[inside_column_title] = np.nan
-            self.data[inside_detail_column_title] = ''
-            self.data[outside_by_column_title] = np.nan
-
-        for index, row in self.data.iterrows():
-            print(str(row["state_long"])+"\t -"+str(index))
-            if index <= datetime.datetime.strptime('2020-04-08', '%Y-%m-%d'):
-                for pred_idx in range(1, self.n_lookahead_evaluations+1):
-                    prediction_dataset_date = index - pd.Timedelta(str(pred_idx)+' days') #On the day of the file, the next day is predicted
-                    prediction_dataframe = pd.DataFrame()
-                    for prediction_dataset in prediction_datasets:
-                        if prediction_dataset_date.strftime("%Y_%m_%d") in prediction_dataset[0]:
-                            prediction_dataframe = prediction_dataset[1]
-                    if not prediction_dataframe.empty:
-                        result = self.get_death_prediction(index , row['state_long'], prediction_dataframe)
-                        if result:
-                            self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_EV'] = result['EV'].values[0]
-                            self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_UB'] = result['UB'].values[0]
-                            self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_LB'] = result['LB'].values[0]
-                            self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_error'] = row['delta_deaths_jhu'] - result['EV'].values[0]
-                            if row['delta_deaths_jhu'] >= result['LB'].values[0] and row['delta_deaths_jhu'] <= result['UB'].values[0]:
-                                self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside'] = 1
-                                self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_outside_by'] = 0
-                                self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside_detail'] = 'inside'
-
-                            else:
-                                self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside'] = 0
-                                if row['delta_deaths_jhu'] < result['LB'].values[0]:
-                                    self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_outside_by'] = row['delta_deaths_jhu'] - result['LB'].values[0]
-                                    self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside_detail'] = 'below'
-                                elif row['delta_deaths_jhu'] > result['UB'].values[0]:
-                                    self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_outside_by'] = row['delta_deaths_jhu'] - result['UB'].values[0]
-                                    self.data.loc[(self.data['state_long'] == row['state_long']) & (self.data.index == index), 'deaths_pred_' + str(pred_idx) + '_inside_detail'] = 'above'
-
-        print("fetching predictions.")
-
 
 # Target directory contains data on predictions for every day.
-evaluator_1 = CovidPredictionEvaluator(model_directory='data_model_1/')
-evaluator_2 = CovidPredictionEvaluator(model_directory='data_model_2/')
+evaluator_1 = CovidPredictionEvaluator(model_directory='data_model_1/', model_name="V1")
+evaluator_1.plot_results()
+df_1 = evaluator_1.get_all_data_as_csv()
+df_1_state = evaluator_1.get_state_data_as_csv()
+evaluator_2 = CovidPredictionEvaluator(model_directory='data_model_2/', model_name="V2")
+evaluator_2.plot_results()
+df_2 = evaluator_2.get_all_data_as_csv()
+df_2_state = evaluator_2.get_state_data_as_csv()
+
+#evaluator_3 = CovidPredictionEvaluator(model_directory='data/', model_name="")
+#evaluator_3.evaluate_area_change_matrix()
+
+df_all = pd.concat([df_1,df_2])
+df_all.to_csv('all_results.csv')
+
+df_all_state = pd.concat([df_1_state,df_2_state])
+df_all_state.to_csv('all_results_by_state.csv')
+print("Written results to csv")
