@@ -69,8 +69,6 @@ class PredictionDataset:
             print("Prediction max and date: "+str(self.last_observation_date)+" "+state[1]+": "+str(max_val)+", "+str(max_date))
         return max(self.df)
 
-
-
     def evaluate_performance(self, gt_data):
         first = True
         for state in usa_states:
@@ -300,7 +298,7 @@ class CovidPredictionEvaluator:
 
             except KeyError:
                 print("Captured Key Error")
-        self.gt_data = self.gt_data.dropna()
+#        self.gt_data = self.gt_data.dropna()
 
     def evaluate_area_overlap_matrix(self):
         # Evaluate the overlap in total area between one model and the rest, summed for all states.
@@ -323,21 +321,10 @@ class CovidPredictionEvaluator:
 
 
 # Target directory contains data on predictions for every day.
-evaluator_1 = CovidPredictionEvaluator(model_directory='data_model_1/', model_name="V1")
-evaluator_1.plot_results()
-df_1 = evaluator_1.get_all_data_as_csv()
-df_1_state = evaluator_1.get_state_data_as_csv()
-evaluator_2 = CovidPredictionEvaluator(model_directory='data_model_2/', model_name="V2")
-evaluator_2.plot_results()
-df_2 = evaluator_2.get_all_data_as_csv()
-df_2_state = evaluator_2.get_state_data_as_csv()
-
-#evaluator_3 = CovidPredictionEvaluator(model_directory='data/', model_name="")
-#evaluator_3.evaluate_area_change_matrix()
-
-df_all = pd.concat([df_1,df_2])
-df_all.to_csv('all_results.csv')
-
-df_all_state = pd.concat([df_1_state,df_2_state])
-df_all_state.to_csv('all_results_by_state.csv')
+evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="-")
+evaluator.plot_results()
+df = evaluator.get_all_data_as_csv()
+df.to_csv('all_results.csv')
+df_state = evaluator.get_state_data_as_csv()
+df_state.to_csv('all_results_by_state.csv')
 print("Written results to csv")
