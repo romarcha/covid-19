@@ -78,7 +78,14 @@ class PredictionDataset:
             performance_df['ev'] = state_df.loc[aux_gt_df.index]['deaths_mean']
             performance_df['lb'] = state_df.loc[aux_gt_df.index]['deaths_lower']
             performance_df['ub'] = state_df.loc[aux_gt_df.index]['deaths_upper']
-            performance_df['gt'] = aux_gt_df['delta_deaths_jhu']
+            # Only for new york use the data from the new york times
+            if state[1] == "New York":
+                performance_df['gt'] = aux_gt_df['delta_deaths_nyt']
+            else:
+                performance_df['gt'] = aux_gt_df['delta_deaths_jhu']
+
+            performance_df['gt_ihme'] = aux_gt_df['delta_deaths_ihme']
+            performance_df['gt_nyt'] = aux_gt_df['delta_deaths_nyt']
             performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.loc[aux_gt_df.index]['deaths_mean']
 
             # Fill up all performance values with default value
@@ -269,6 +276,25 @@ class CovidPredictionEvaluator:
                 prediction_dataset = PredictionDataset(last_observation_date=last_observation_on,data_frame=temp_df,model_name=self.model_name)
                 self.datasets.append(prediction_dataset)
 
+        # Find oldest CSV file to extract GT time series
+        oldest_filename = latest_filename
+        ihme_latest_df = pd.read_csv(self.model_directory + oldest_filename + '/Hospitalization_all_locs.csv')
+        date_format = "%Y-%m-%d"
+        ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
+        ihme_latest_df.index = ihme_latest_df['date']
+        # Check if file contains location as name, if not turn location_name to location
+        if 'location' not in ihme_latest_df:
+            if 'location_name' in ihme_latest_df:
+                ihme_latest_df = ihme_latest_df.rename(columns={'location_name': 'location'})
+
+        # 'Extracting New York Times Data'
+        nyt_path = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"
+        nyt_r = requests.get(nyt_path, stream=True)
+        nytimes_df = pd.read_csv(StringIO(nyt_r.text))
+        date_format = "%Y-%m-%d"
+        nytimes_df['date'] = pd.to_datetime(nytimes_df['date'], format=date_format)
+        nytimes_df.index = nytimes_df['date']
+
         # John Hopkins University is different format, for each state there are multiple columns.
         print('Extracting John Hopkins University Data')
         jhu_path = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
@@ -285,6 +311,19 @@ class CovidPredictionEvaluator:
             state_df['state_short'] = state[0]
             state_df['state_long'] = state[1]
             try:
+                # IHME Ground Truth Data
+                original_state_df = ihme_latest_df[ihme_latest_df["location"] == state[1]]
+                original_state_df = original_state_df[original_state_df.index < latest_file]
+                state_df['delta_deaths_ihme'] = original_state_df.loc[state_df.index]['deaths_mean']
+
+                # New York Times Data
+                nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
+                nytimes_df_tmp = nytimes_df_tmp.drop(columns=['date', 'state'])
+                nytimes_df_tmp = nytimes_df_tmp.diff()
+                nytimes_df_tmp = nytimes_df_tmp.fillna(0)
+                nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
+                state_df['delta_deaths_nyt'] = nytimes_df_tmp.loc[state_df.index]['delta_deaths']
+
                 # Extract JHU Data
                 jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
                 #Sum per state, and filter for the dates containing 2020 as /20
