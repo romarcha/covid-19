@@ -3,11 +3,23 @@ Repository for placing code related to COVID-19 projects.
 
 ## Prerequesists
 
-You require Python 3.
+1) You require Python 3.
+
+Ubuntu
+```
+sudo apt-get install python3
+sudo apt-get install python3-pip
+```
 
 MacOS
 ```
 brew install python3
+brew install postgresql
+```
+
+2) You require a virtual environment to ensure all packages are compatible with the specific version of the code
+
+```
 pip3 install virtualenv
 cd <project-path>
 virtualenv -p python3 <project-path>
@@ -16,6 +28,7 @@ source <project-path>/bin/activate
 
 Python required packages are detailed in the "requirements.txt" file. These
 dependencies can be installed by executing:
+
 ```
 cd <project-path>
 pip install -r requirements.txt
