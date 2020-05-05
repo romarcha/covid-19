@@ -3,12 +3,13 @@ Repository for placing code related to COVID-19 projects.
 
 ## Prerequesists
 
-1) You require Python 3.
+1) You require Python 3 to run the backend and Postgresql to handle the database.
 
 Ubuntu
 ```
 sudo apt-get install python3
 sudo apt-get install python3-pip
+sudo apt-get install postgresql-server-dev-all
 ```
 
 MacOS
