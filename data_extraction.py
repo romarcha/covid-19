@@ -336,7 +336,7 @@ class CovidPredictionEvaluator:
                 self.gt_data = self.gt_data.append(state_df, sort=True)
 
             except KeyError as raised_error:
-                print("Captured Key Error "+raised_error)
+                print("Captured Key Error "+str(raised_error))
 #        self.gt_data = self.gt_data.dropna()
 
     def evaluate_area_overlap_matrix(self):
