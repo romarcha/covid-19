@@ -72,12 +72,13 @@ class PredictionDataset:
     def evaluate_performance(self, gt_data):
         first = True
         for state in usa_states:
+            print("Evaluating performance for "+state[1]+" \t Model last obs: "+str(self.last_observation_date))
             aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
             state_df = self.df[self.df['location'] == state[1]]
             performance_df = pd.DataFrame()
-            performance_df['ev'] = state_df.loc[aux_gt_df.index]['deaths_mean']
-            performance_df['lb'] = state_df.loc[aux_gt_df.index]['deaths_lower']
-            performance_df['ub'] = state_df.loc[aux_gt_df.index]['deaths_upper']
+            performance_df['ev'] = state_df.reindex(aux_gt_df.index)['deaths_mean']
+            performance_df['lb'] = state_df.reindex(aux_gt_df.index)['deaths_lower']
+            performance_df['ub'] = state_df.reindex(aux_gt_df.index)['deaths_upper']
             # Only for new york use the data from the new york times
             if state[1] == "New York":
                 performance_df['gt'] = aux_gt_df['delta_deaths_nyt']
@@ -86,7 +87,7 @@ class PredictionDataset:
 
             performance_df['gt_ihme'] = aux_gt_df['delta_deaths_ihme']
             performance_df['gt_nyt'] = aux_gt_df['delta_deaths_nyt']
-            performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.loc[aux_gt_df.index]['deaths_mean']
+            performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.reindex(aux_gt_df.index)['deaths_mean']
 
             # Fill up all performance values with default value
             performance_df['PE'] = np.nan
@@ -101,8 +102,8 @@ class PredictionDataset:
                     performance_df.at[i, 'PE'] = np.nan
                     performance_df.at[i, 'Adj PE'] = np.nan
                 elif not row['ev'] == 0 and row['gt'] == 0:
-                    performance_df.at[i, 'PE'] = np.nan
-                    performance_df.at[i, 'Adj PE'] = np.nan
+                    performance_df.at[i, 'PE'] = np.inf
+                    performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
                 else:
                     performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
                     performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
@@ -314,7 +315,7 @@ class CovidPredictionEvaluator:
                 # IHME Ground Truth Data
                 original_state_df = ihme_latest_df[ihme_latest_df["location"] == state[1]]
                 original_state_df = original_state_df[original_state_df.index < latest_file]
-                state_df['delta_deaths_ihme'] = original_state_df.loc[state_df.index]['deaths_mean']
+                state_df['delta_deaths_ihme'] = original_state_df.reindex(state_df.index)['deaths_mean']
 
                 # New York Times Data
                 nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
@@ -322,7 +323,7 @@ class CovidPredictionEvaluator:
                 nytimes_df_tmp = nytimes_df_tmp.diff()
                 nytimes_df_tmp = nytimes_df_tmp.fillna(0)
                 nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
-                state_df['delta_deaths_nyt'] = nytimes_df_tmp.loc[state_df.index]['delta_deaths']
+                state_df['delta_deaths_nyt'] = nytimes_df_tmp.reindex(state_df.index)['delta_deaths']
 
                 # Extract JHU Data
                 jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
@@ -331,7 +332,7 @@ class CovidPredictionEvaluator:
                 jhu_sum_series = jhu_sum_series.diff()
                 jhu_sum_series = jhu_sum_series.fillna(0)
                 jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
-                state_df['delta_deaths_jhu'] = jhu_sum_series.loc[state_df.index]
+                state_df['delta_deaths_jhu'] = jhu_sum_series.reindex(state_df.index)
 
                 self.gt_data = self.gt_data.append(state_df, sort=True)
 
