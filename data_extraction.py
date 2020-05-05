@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 from io import StringIO
 from defs import *
+from sqlalchemy import create_engine
 
 
 class PredictionDataset:
@@ -72,7 +73,7 @@ class PredictionDataset:
     def evaluate_performance(self, gt_data):
         first = True
         for state in usa_states:
-            print("Evaluating performance for "+state[1]+" \t Model last obs: "+str(self.last_observation_date))
+            print("Evaluating performance for "+state[1]+" \t\t Model last obs: "+str(self.last_observation_date))
             aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
             state_df = self.df[self.df['location'] == state[1]]
             performance_df = pd.DataFrame()
@@ -243,6 +244,29 @@ class CovidPredictionEvaluator:
         df_all.to_csv(self.model_directory + 'output_data_per_state.csv')
         return df_all
 
+    def upload_to_db(self):
+        # For each dataset
+        df_list = []
+        for dataset in self.datasets:
+            df_list.append(dataset.processed_df)
+        df_all = pd.concat(df_list)
+        db_username = "covidDB"
+        db_password = "KiorwWN46Kjr1wC8WiZE"
+        db_host = "covid-databases.cwtoyn9xsrzw.ap-southeast-2.rds.amazonaws.com"
+        db_port = "5432"
+        db_database = "postgres"
+        engine = create_engine('postgresql+psycopg2://'+db_username+':'+db_password+'@'+db_host+':'+db_port+'/'+db_database)
+        print("Writing to SQL databbase.")
+        df_all.head(0).to_sql('all_results', engine, if_exists='replace', index=True)  # truncates the table
+        conn = engine.raw_connection()
+        cur = conn.cursor()
+        output = StringIO()
+        df_all.to_csv(output, sep='\t', header=False, index=True)
+        output.seek(0)
+        cur.copy_from(output, 'all_results', null="")  # null values become ''
+        conn.commit()
+        print("Finished writing to SQL databbase.")
+
     def organise_data(self):
         # Load all csv files with their respective last observation date.
 
@@ -281,6 +305,9 @@ class CovidPredictionEvaluator:
         oldest_filename = latest_filename
         ihme_latest_df = pd.read_csv(self.model_directory + oldest_filename + '/Hospitalization_all_locs.csv')
         date_format = "%Y-%m-%d"
+        # Some datasets were preprocessed by third party so changed format of dates
+        if "2020_03_30" in oldest_filename or "2020_03_29" in oldest_filename:
+            date_format = "%m/%d/%Y"
         ihme_latest_df['date'] = pd.to_datetime(ihme_latest_df['date'], format=date_format)
         ihme_latest_df.index = ihme_latest_df['date']
         # Check if file contains location as name, if not turn location_name to location
@@ -363,8 +390,7 @@ class CovidPredictionEvaluator:
 # Target directory contains data on predictions for every day.
 evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="-")
 evaluator.plot_results()
-df = evaluator.get_all_data_as_csv()
-df.to_csv('all_results.csv')
-df_state = evaluator.get_state_data_as_csv()
-df_state.to_csv('all_results_by_state.csv')
+evaluator.get_all_data_as_csv()
+evaluator.get_state_data_as_csv()
+evaluator.upload_to_db()
 print("Written results to csv")
