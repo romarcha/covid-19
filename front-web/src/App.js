@@ -6,10 +6,13 @@ import mapboxgl from 'mapbox-gl';
 import data from "./data/out.geojson"
 import Checkbox from './components/checkbox'
 import checkboxes from './data/checkboxes'
+import geometry from './data/geometry'
+import Chart from "react-google-charts";
 
-const ROOT_URL = 'http://localhost:3500/query'
+const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500/query'
 mapboxgl.accessToken = 'pk.eyJ1IjoibWFudWVsdXpjYXRlZ3VpIiwiYSI6ImNrOWs4OHdtNTAzcnczbm1rbnFqb3JzangifQ.L0zmTAujoe3rq_fG--1LDw';
 
+var map;
 
 class App extends Component {
   constructor(props) {
@@ -20,20 +23,23 @@ class App extends Component {
       lookahead: 1,
       geoData: {},
       checkedItemsDate: new Map()
+      
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleChangeLookahead = this.handleChangeLookahead.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.create_geojson = this.create_geojson.bind(this);
+    this.update_map = this.update_map.bind(this);
   }
 
   async componentDidMount() {
-    var map = new mapboxgl.Map({
+      map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v11',
+      style: 'mapbox://styles/manueluzcategui/ck9vj0ls40m6g1iomdco2kw9e',
       center: [-100.486052, 37.830348],
       zoom: 3
       });
       var hoveredStateId = null;
-      console.log(this.props.data)
       
       map.on('load', function() {
       map.addSource('states', {
@@ -49,34 +55,49 @@ class App extends Component {
         'fill-color': [
           'interpolate',
           ['linear'],
-          ['get', 'gt'],
+          ['get', 'error'],
+          -50,
+          '#0e4d65',
+          -40,
+          '#10667d',
+          -30,
+          '#128095',
+          -20,
+          '#149aad',
+          -10,
+          '#16b4c5',
           0,
-          '#F2F12D',
+          '#ffffff',
           10,
-          '#EED322',
+          '#16b4c5',
           20,
-          '#E6B71E',
+          '#149aad',
+          30,
+          '#128095',
+          40,
+          '#10667d',
           50,
-          '#DA9C20',
-          100,
-          '#CA8323',
-          500,
-          '#B86B25',
-          1000,
-          '#A25626',
-          5000,
-          '#8B4225',
-          100000,
-          '#723122'
+          '#0e4d65'
           ],
       'fill-opacity': [
       'case',
       ['boolean', ['feature-state', 'hover'], false],
-      0.5,
-      0.3
+      1,
+      0.8
       ]
       }
       });
+      map.moveLayer('state-fills', 'state-label');
+      map.addLayer({
+        'id': 'state-borders',
+        'type': 'line',
+        'source': 'states',
+        'layout': {},
+        'paint': {
+        'line-color': '#0e4d65',
+        'line-width': 1
+        }
+        });
 
       map.on('mousemove', 'state-fills', function(e) {
       if (e.features.length > 0) {
@@ -93,9 +114,7 @@ class App extends Component {
       );
       }
       });
-      
-      // When the mouse leaves the state-fill layer, update the feature state of the
-      // previously hovered feature.
+
       map.on('mouseleave', 'state-fills', function() {
       if (hoveredStateId) {
       map.setFeatureState(
@@ -109,38 +128,42 @@ class App extends Component {
   
       map.on('mousemove', (e) => {
           var states = map.queryRenderedFeatures(e.point, {
-              // layout: "out-73seb6"
+              // layout: "state-fills"
           });
           
           if (states.length > 0) {
-              document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
-              '<p><strong>date: ' + states[0].properties.date + '</strong></p>'+
-              '<p><strong>ev: ' + states[0].properties.ev + '</strong></p>'+
-              '<p><strong>lb: ' + states[0].properties.lb + '</strong></p>'+
-              '<p><strong>ub: ' + states[0].properties.ub + '</strong></p>'+
-              '<p><strong>gt: ' + states[0].properties.gt + '</strong></p>'+
-              '<p><strong>error: ' + states[0].properties.error + '</strong></p>'+
-              '<p><strong>PE: ' + states[0].properties.PE + '</strong></p>'+
-              '<p><strong>Adj PE: ' + states[0].properties['Adj PE'] + '</strong></p>'+
-              '<p><strong>APE: ' + states[0].properties.APE + '</strong></p>'+
-              '<p><strong>Adj APE: ' + states[0].properties['Adj APE'] + '</strong></p>'+
-              '<p><strong>LAPE: ' + states[0].properties.LAPE + '</strong></p>'+
-              '<p><strong>LAdj APE: ' + states[0].properties['LAdj APE'] + '</strong></p>'+
-              '<p><strong>last_obs_date: ' + states[0].properties.last_obs_date + '</strong></p>'+
-              '<p><strong>within_PI: ' + states[0].properties.within_PI + '</strong></p>'+
-              '<p><strong>outside_by: ' + states[0].properties.outside_by + '</strong></p>'+
-              '<p><strong>model_name: ' + states[0].properties.model_name + '</strong></p>'+
-              '<p><strong>lookahead: ' + states[0].properties.lookahead + '</strong></p>'
+              if (states[0].properties.date !== undefined){
+                document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
+                '<p><strong>date: ' + states[0].properties.date + '</strong></p>'+
+                '<p><strong>ev: ' + states[0].properties.ev + '</strong></p>'+
+                '<p><strong>lb: ' + states[0].properties.lb + '</strong></p>'+
+                '<p><strong>ub: ' + states[0].properties.ub + '</strong></p>'+
+                '<p><strong>gt: ' + states[0].properties.gt + '</strong></p>'+
+                '<p><strong>error: ' + states[0].properties.error + '</strong></p>'+
+                '<p><strong>PE: ' + states[0].properties.PE + '</strong></p>'+
+                '<p><strong>Adj PE: ' + states[0].properties['Adj PE'] + '</strong></p>'+
+                '<p><strong>APE: ' + states[0].properties.APE + '</strong></p>'+
+                '<p><strong>Adj APE: ' + states[0].properties['Adj APE'] + '</strong></p>'+
+                '<p><strong>LAPE: ' + states[0].properties.LAPE + '</strong></p>'+
+                '<p><strong>LAdj APE: ' + states[0].properties['LAdj APE'] + '</strong></p>'+
+                '<p><strong>last_obs_date: ' + states[0].properties.last_obs_date + '</strong></p>'+
+                '<p><strong>within_PI: ' + states[0].properties.within_PI + '</strong></p>'+
+                '<p><strong>outside_by: ' + states[0].properties.outside_by + '</strong></p>'+
+                '<p><strong>model_name: ' + states[0].properties.model_name + '</strong></p>'+
+                '<p><strong>lookahead: ' + states[0].properties.lookahead + '</strong></p>'
+              }
+              else{
+                document.getElementById('pd').innerHTML = '<p>Hover over a state!</p>';
+              }              
           } else {
               document.getElementById('pd').innerHTML = '<p>Hover over a state!</p>';
           }
           });
-    this.read_database()
   }
 
   async read_database(){
     let data = await axios.get(ROOT_URL, {
-      headers: {'model_date': '2020-04-02', 'lookahead': 1}
+      headers: {'model_date': this.state.date, 'lookahead': this.state.lookahead}
       })
       .then(function async (response) {
         return response 
@@ -148,23 +171,63 @@ class App extends Component {
       .catch(function (error) {
         console.log(error);
       })
-    this.setState({geoData: data})
-    console.log(this.state.geoData)
+    return data.data
   }
 
-  handleChange(e) {
+  create_geojson(data){
+    let object = {}
+    object['type'] = 'FeatureCollection'
+    let features = data.map(function(element, index){
+      let dict = {}
+      dict['type'] = 'Feature'
+      dict['id'] = index
+      dict['properties'] = {
+        "name": element['state_long'],
+        "short_name": element['state_short'],
+        "date": element['date'],
+        "ev": element['ev'],
+        "lb": element['lb'],
+        "ub": element['ub'],
+        "gt": element['gt'],
+        "error": parseFloat(element['error']),
+        "PE": element['PE'],
+        "Adj PE": element['Adj PE'],
+        "APE": element['APE'],
+        "Adj APE": element['Adj APE'],
+        "LAPE": element['LAPE'],
+        "LAdj APE": element['LAdj APE'],
+        "last_obs_date": element['last_obs_date'],
+        "within_PI": element['within_PI'],
+        "outside_by": element['outside_by'],
+        "model_name": element['model_name'],
+        "lookahead": element['lookahead']
+      }
+      dict['geometry'] = geometry[element['state_short']]
+      return dict
+    })
+    object['features'] = features
+    this.setState({geoData: object})
+    this.update_map(object)
+  }
+
+  update_map(geojson){
+    // console.log(geojson)
+    map.getSource('states').setData(geojson);
+  }
+
+  async handleChange(e) {
     const item = e.target.name;
     const isChecked = e.target.checked;
     this.setState({checkedItemsDate: new Map()})
     this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(item, isChecked) }));
     this.setState({date: item})
   }
-  handleChangeLookahead(e) {
-    // console.log(e.currentTarget.value);
+  async handleChangeLookahead(e) {
     this.setState({lookahead: e.currentTarget.value })
   }
-  handleSubmit(){
-    console.log('test')
+  async handleSubmit(){
+    let geoData = await this.read_database()
+    this.create_geojson(geoData)
   }
 
   render() {
