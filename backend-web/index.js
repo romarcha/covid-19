@@ -17,16 +17,29 @@ const connectionData = {
   }
 
 app.get('/query', function (req, res) {
-    console.log(req.headers['model_date'])
-    // console.log(req.headers['lookahead'])
 
     const client = new Client(connectionData)
     client.connect()
-    var query = "SELECT * FROM datasets WHERE date = '" + req.headers['model_date'] + "' AND lookahead = '"+req.headers['lookahead']+"'";
+    var query = "SELECT * FROM datasets WHERE last_obs_date = '" + req.headers['model_date'] + "' AND lookahead = '"+req.headers['lookahead']+"'";
     client.query(query)
     .then(response => {
         res.send(response.rows);
-        console.log(response.rows)
+        client.end()
+    })
+    .catch(err => {
+        client.end()
+    })
+    // res.send('Server: OK');
+});
+
+app.get('/timeLines', function (req, res) {
+
+    const client = new Client(connectionData)
+    client.connect()
+    var query = "SELECT gt,state_short FROM datasets WHERE last_obs_date = '" + req.headers['model_date'] + "'";
+    client.query(query)
+    .then(response => {
+        res.send(response.rows);
         client.end()
     })
     .catch(err => {
