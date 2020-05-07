@@ -25,7 +25,7 @@ class PredictionDataset:
         self.df = data_frame[data_frame.index > last_observation_date]
         self.processed_df = pd.DataFrame()
         self.model_name = model_name
-        self.starting_date = pd.to_datetime("2020-04-17")
+        self.performance_evaluated = False
 
     def prediction_for_location(self, location):
         return self.df[self.df['location'] == location]
@@ -48,7 +48,8 @@ class PredictionDataset:
         result = []
         for state in usa_states:
             state_df = self.df[self.df['location'] == state[1]]
-            state_df = state_df[state_df.index >= self.starting_date]
+            state_df = state_df[state_df.index >= pd.to_datetime("2020-04-17")] #Use the same date as minimum for all models, otherwise the total area between lower and upper bound comparison is unfair.
+            #todo: Even though the starting date is the same. Some models start predicting far after 2020-04-17, therefore comparisons are still unfair. The date should be selected as the maximum of the minimum of all predicted dates of models.
             area = sum(state_df['deaths_upper'] - state_df['deaths_lower'])
             max_val = max(state_df['deaths_mean'])
             max_date = state_df['deaths_mean'].idxmax()
@@ -114,6 +115,9 @@ class PredictionDataset:
             performance_df['LAPE'] = 1 / (1 + np.exp(-performance_df['APE']/100))
             performance_df['LAdj APE'] = 1 / (1 + np.exp(-performance_df['Adj APE']/100))
 
+            if (performance_df['LAPE'] > 1).any():
+                raise Exception("LAPE greater than 1")
+
             performance_df['last_obs_date'] = self.last_observation_date
             # Check if inside, below or above bounds
             #performance_df = performance_df.dropna()
@@ -140,6 +144,9 @@ class PredictionDataset:
                 first = False
             else:
                 self.processed_df = self.processed_df.append(performance_df)
+        self.performance_evaluated = True
+
+#    def plot(self):
 
 
 class CovidPredictionEvaluator:
@@ -388,7 +395,7 @@ class CovidPredictionEvaluator:
 
 
 # Target directory contains data on predictions for every day.
-evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="-")
+evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="IHME")
 evaluator.plot_results()
 evaluator.get_all_data_as_csv()
 evaluator.get_state_data_as_csv()
