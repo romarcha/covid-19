@@ -1,4 +1,5 @@
 import React, { Component } from "react";
+import ReactDOM from 'react-dom';
 import './App.css';
 import axios from 'axios';
 import './assets/css/map1.css';
@@ -9,7 +10,7 @@ import checkboxes from './data/checkboxes'
 import geometry from './data/geometry'
 import Chart from "react-google-charts";
 
-const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500/query'
+const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
 // const ROOT_URL = 'http://localhost:3500'
 mapboxgl.accessToken = 'pk.eyJ1IjoibWFudWVsdXpjYXRlZ3VpIiwiYSI6ImNrOWs4OHdtNTAzcnczbm1rbnFqb3JzangifQ.L0zmTAujoe3rq_fG--1LDw';
 
@@ -20,15 +21,17 @@ class App extends Component {
     super(props);
 
     this.state = {
-      date: '',
-      lookahead: 1,
+      date: '2020-03-29',
+      lookahead: '1',
       geoData: {},
-      checkedItemsDate: new Map()
+      checkedItemsDate: new Map(),
+      checkedItemsLookahead: new Map(),
+      states_lines_data: []
       
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleChangeLookahead = this.handleChangeLookahead.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
+    // this.handleSubmit = this.handleSubmit.bind(this);
     this.create_geojson = this.create_geojson.bind(this);
     this.update_map = this.update_map.bind(this);
     this.create_charts = this.create_charts.bind(this);
@@ -128,44 +131,70 @@ class App extends Component {
     });
     });
 
-    map.on('mousemove', (e) => {
+    map.on('click', (e) => {
         var states = map.queryRenderedFeatures(e.point, {
             // layout: "state-fills"
         });
-        
         if (states.length > 0) {
             if (states[0].properties.date !== undefined){
               document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
               '<p><strong>date: ' + states[0].properties.date + '</strong></p>'+
-              '<p><strong>ev: ' + states[0].properties.ev + '</strong></p>'+
-              '<p><strong>lb: ' + states[0].properties.lb + '</strong></p>'+
-              '<p><strong>ub: ' + states[0].properties.ub + '</strong></p>'+
-              '<p><strong>gt: ' + states[0].properties.gt + '</strong></p>'+
-              '<p><strong>error: ' + states[0].properties.error + '</strong></p>'+
-              '<p><strong>PE: ' + states[0].properties.PE + '</strong></p>'+
-              '<p><strong>Adj PE: ' + states[0].properties['Adj PE'] + '</strong></p>'+
-              '<p><strong>APE: ' + states[0].properties.APE + '</strong></p>'+
-              '<p><strong>Adj APE: ' + states[0].properties['Adj APE'] + '</strong></p>'+
-              '<p><strong>LAPE: ' + states[0].properties.LAPE + '</strong></p>'+
+              '<p><strong>ev: ' + parseFloat(states[0].properties.ev).toFixed(2) + '</strong></p>'+
+              '<p><strong>lb: ' + parseFloat(states[0].properties.lb).toFixed(2) + '</strong></p>'+
+              '<p><strong>ub: ' + parseFloat(states[0].properties.ub).toFixed(2) + '</strong></p>'+
+              '<p><strong>gt: ' + parseFloat(states[0].properties.gt).toFixed(2) + '</strong></p>'+
+              '<p><strong>error: ' + parseFloat(states[0].properties.error).toFixed(2) + '</strong></p>'+
+              '<p><strong>PE: ' + parseFloat(states[0].properties.PE).toFixed(2) + '</strong></p>'+
+              '<p><strong>Adj PE: ' + parseFloat(states[0].properties['Adj PE']).toFixed(2) + '</strong></p>'+
+              '<p><strong>APE: ' + parseFloat(states[0].properties.APE).toFixed(2) + '</strong></p>'+
+              '<p><strong>Adj APE: ' + parseFloat(states[0].properties['Adj APE']).toFixed(2) + '</strong></p>'+
+              '<p><strong>LAPE: ' + parseFloat(states[0].properties.LAPE).toFixed(2) + '</strong></p>'+
               '<p><strong>LAdj APE: ' + states[0].properties['LAdj APE'] + '</strong></p>'+
               '<p><strong>last_obs_date: ' + states[0].properties.last_obs_date + '</strong></p>'+
               '<p><strong>within_PI: ' + states[0].properties.within_PI + '</strong></p>'+
               '<p><strong>outside_by: ' + states[0].properties.outside_by + '</strong></p>'+
               '<p><strong>model_name: ' + states[0].properties.model_name + '</strong></p>'+
               '<p><strong>lookahead: ' + states[0].properties.lookahead + '</strong></p>'
-            }
-            else{
-              document.getElementById('pd').innerHTML = '<p>Hover over a state!</p>';
-            }              
-        } else {
-            document.getElementById('pd').innerHTML = '<p>Hover over a state!</p>';
-        }
+              let dataChart = [
+                [{ type: 'date', label: 'Day' },
+                { type: 'number', label: 'LB' },
+                { type: 'number', label: 'EV' },
+                { type: 'number', label: 'UB' }]
+              ]
+              let temp_data = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
+                return [new Date(parseFloat(element.date.split('-')[0]),parseFloat(element.date.split('-')[1])-1,parseFloat(element.date.split('-')[2])),parseFloat(element.lb),parseFloat(element.ev),parseFloat(element.ub)]
+              })
+              for (var date_element in temp_data){
+                dataChart.push(temp_data[date_element])
+              }
+              const element = (
+              <div>
+              <Chart
+                width={'100%'}
+                height={'100%'}
+                chartType="LineChart"
+                loader={<div>Loading Chart</div>}
+                data={dataChart}
+                options={{
+                  title: states[0].properties.name,
+                  titleTextStyle: { 
+                    fontSize: 24},
+                }}
+                />
+                </div>
+                );
+              ReactDOM.render(element, document.getElementById('chart'));
+            }               
+        } 
         });
+        this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(this.state.date, true) }));
+        this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(this.state.lookahead, true) }));
+        this.create_charts(this.state.date)
   }
 
-  async read_database(){
+  async read_database(date,lookahead){
     let data = await axios.get(ROOT_URL+'/query', {
-      headers: {'model_date': this.state.date, 'lookahead': this.state.lookahead}
+      headers: {'model_date': date, 'lookahead': lookahead}
       })
       .then(function async (response) {
         return response 
@@ -217,9 +246,9 @@ class App extends Component {
     map.getSource('states').setData(geojson);
   }
 
-  async create_charts(){
+  async create_charts(date){
     let data = await axios.get(ROOT_URL+'/timeLines', {
-      headers: {'model_date': this.state.date}
+      headers: {'model_date': date}
       })
       .then(function async (response) {
         return response 
@@ -227,69 +256,39 @@ class App extends Component {
       .catch(function (error) {
         console.log(error);
     })
-    // console.log(data.data)
-    let state_lines = []
-    for (var key in geometry) {
-      state_lines.push(data.data.filter(element => element.state_short === key))      
-    }
-    console.log(state_lines)
-
-    // var data2 = new google.visualization.DataTable();
-    // data2.addColumn('number', 'Day');
-    // data2.addColumn('number', 'GT');
-
-    // data.addRows([
-    //   [1,  37.8, 80.8, 41.8],
-    //   [2,  30.9, 69.5, 32.4],
-    //   [3,  25.4,   57, 25.7],
-    //   [4,  11.7, 18.8, 10.5],
-    //   [5,  11.9, 17.6, 10.4],
-    //   [6,   8.8, 13.6,  7.7],
-    //   [7,   7.6, 12.3,  9.6],
-    //   [8,  12.3, 29.2, 10.6],
-    //   [9,  16.9, 42.9, 14.8],
-    //   [10, 12.8, 30.9, 11.6],
-    //   [11,  5.3,  7.9,  4.7],
-    //   [12,  6.6,  8.4,  5.2],
-    //   [13,  4.8,  6.3,  3.6],
-    //   [14,  4.2,  6.2,  3.4]
-    // ]);
-
-    // var options = {
-    //   chart: {
-    //     title: 'Box Office Earnings in First Two Weeks of Opening',
-    //     subtitle: 'in millions of dollars (USD)'
-    //   },
-    //   width: 900,
-    //   height: 500,
-    //   axes: {
-    //     x: {
-    //       0: {side: 'top'}
-    //     }
-    //   }
-    // };
-
-    // var chart = new google.charts.Line(document.getElementById('line_top_x'));
-
-    // chart.draw(data, google.charts.Line.convertOptions(options));
+    this.setState({states_lines_data: data.data})
   }
 
 
   async handleChange(e) {
     const item = e.target.name;
     const isChecked = e.target.checked;
-    this.setState({checkedItemsDate: new Map()})
-    this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(item, isChecked) }));
-    this.setState({date: item})
+    if (isChecked !== false){
+      this.setState({checkedItemsDate: new Map()})
+      this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(item, isChecked) }));
+      this.setState({date: item})
+      let geoData = await this.read_database(item,this.state.lookahead)
+      this.create_geojson(geoData)
+      this.create_charts(item)
+    }    
   }
   async handleChangeLookahead(e) {
-    this.setState({lookahead: e.currentTarget.value })
+    const item = e.target.name;
+    const isChecked = e.target.checked;
+    if (isChecked !== false){
+      this.setState({checkedItemsLookahead: new Map()})
+      this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(item, isChecked) }));
+      this.setState({lookahead: parseFloat(item)})
+      let geoData = await this.read_database(this.state.date,parseFloat(item))
+      this.create_geojson(geoData)
+      this.create_charts(this.state.date)
+    }
   }
-  async handleSubmit(){
-    let geoData = await this.read_database()
-    this.create_geojson(geoData)
-    // this.create_charts()
-  }
+  // async handleSubmit(){
+  //   // let geoData = await this.read_database(this.state.date,this.state.lookahead)
+  //   // this.create_geojson(geoData)
+  //   this.create_charts()
+  // }
 
   render() {
     return (
@@ -300,7 +299,7 @@ class App extends Component {
           <div className='map-overlay-select' id='features-selection'><h2>Select Model</h2>
             <div id='selection'>
             {
-              checkboxes.map(item => (
+              checkboxes[0].map(item => (
                 <label key={item.key}>
                   {item.name}
                   <Checkbox name={item.name} checked={this.state.checkedItemsDate.get(item.name)} onChange={this.handleChange} />
@@ -309,31 +308,27 @@ class App extends Component {
               ))
             }
             <h2>Select Lookahead</h2>
-            <input style={{width: '50px'}} type="number" value={this.state.lookahead} onChange={this.handleChangeLookahead} onInput={this.handleInput} />
+            {
+              checkboxes[1].map(item => (
+                <label key={item.key}>
+                  {item.name}
+                  {item.key === "4"
+                  ? <React-Fragment><Checkbox name={item.name} checked={this.state.checkedItemsLookahead.get(item.name)} onChange={this.handleChangeLookahead} /><br/></React-Fragment>
+                  : <Checkbox name={item.name} checked={this.state.checkedItemsLookahead.get(item.name)} onChange={this.handleChangeLookahead} />
+                  }
+                </label>
+              ))
+            }
+            {/* <input style={{width: '50px'}} type="number" value={this.state.lookahead} onChange={this.handleChangeLookahead} onInput={this.handleInput} /> */}
             <br/><br/>
-            <button onClick={this.handleSubmit}>
+            {/* <button onClick={this.handleSubmit}>
               send
-            </button>
+            </button> */}
             </div>
           </div>
-          <div className='map-overlay' id='features'><h2>Data for state</h2><div id='pd'><p>Hover over a state!</p></div></div>
+          <div className='map-overlay' id='features'><h2>Data for state</h2><div id='pd'><p>Select a state!</p></div></div>
           <div className='map-overlay-chart' id='features-chart'><h2>Timeline</h2>
-          <Chart
-            width={'100%'}
-            chartType="LineChart"
-            loader={<div>Loading Chart</div>}
-            data={[
-              [
-                { type: 'date', label: 'Day' },
-                'GT',
-              ],
-              [new Date(2014, 0), -0.5]
-            ]}
-            options={{
-              intervals: { style: 'sticks' },
-              legend: 'none',
-            }}
-          />
+          <div id="chart">Select a state!</div>
           </div>
         </div>
         </div>

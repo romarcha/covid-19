@@ -36,7 +36,7 @@ app.get('/timeLines', function (req, res) {
 
     const client = new Client(connectionData)
     client.connect()
-    var query = "SELECT gt,state_short FROM datasets WHERE last_obs_date = '" + req.headers['model_date'] + "'";
+    var query = "SELECT date,ev,lb,ub,state_short FROM datasets WHERE last_obs_date = '" + req.headers['model_date'] + "'";
     client.query(query)
     .then(response => {
         res.send(response.rows);
