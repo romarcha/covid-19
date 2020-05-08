@@ -14,7 +14,7 @@
 #
 # Geneva      - Data for: Global.
 #
-# ????IHME
+# IHME        - Data for: US national and states.
 #
 # Imperial    - Data for: US national.
 #               Note: Data from Reich Lab Github page. 2 different models available.
