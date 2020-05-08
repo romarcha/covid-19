@@ -9,6 +9,7 @@ import Checkbox from './components/checkbox'
 import checkboxes from './data/checkboxes'
 import geometry from './data/geometry'
 import Chart from "react-google-charts";
+import d3Foresight from "d3-foresight"
 
 const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
 // const ROOT_URL = 'http://localhost:3500'
@@ -157,28 +158,42 @@ class App extends Component {
               '<p><strong>lookahead: ' + states[0].properties.lookahead + '</strong></p>'
               let dataChart = [
                 [{ type: 'date', label: 'Day' },
+                { type: 'number', label: 'GT' },
                 { type: 'number', label: 'LB' },
                 { type: 'number', label: 'EV' },
                 { type: 'number', label: 'UB' }]
               ]
               let temp_data = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
-                return [new Date(parseFloat(element.date.split('-')[0]),parseFloat(element.date.split('-')[1])-1,parseFloat(element.date.split('-')[2])),parseFloat(element.lb),parseFloat(element.ev),parseFloat(element.ub)]
+                return [new Date(element.date),parseFloat(element.gt),parseFloat(element.lb),parseFloat(element.ev),parseFloat(element.ub)]
               })
+              console.log(temp_data)
               for (var date_element in temp_data){
                 dataChart.push(temp_data[date_element])
               }
               const element = (
               <div>
+              <h2>Timeline: {states[0].properties.name}</h2>
               <Chart
-                width={'100%'}
-                height={'100%'}
+                className="chartMap"
                 chartType="LineChart"
                 loader={<div>Loading Chart</div>}
                 data={dataChart}
                 options={{
-                  title: states[0].properties.name,
-                  titleTextStyle: { 
-                    fontSize: 24},
+                  // title: states[0].properties.name,
+                  // titleTextStyle: {fontSize: 24},
+                  explorer: { 
+                    actions: ['dragToZoom', 'rightClickToReset'],
+                    axis: 'horizontal',
+                    keepInBounds: true,
+                    maxZoomIn: 10.0},
+                    // series: { 
+                    //   0: {color: '#76737D',areaOpacity: 0},
+                    //   1: {color: '#33BEFF',areaOpacity: 0.5, lineWidth: 0},
+                    //   2: {color: '#195F80',areaOpacity: 0}, 
+                    //   3: {color: '#FF4C42',areaOpacity: 0.2, lineWidth: 0} 
+                    // },
+                    // colors: ['black','red','blue','green'],
+                  
                 }}
                 />
                 </div>
@@ -327,8 +342,8 @@ class App extends Component {
             </div>
           </div>
           <div className='map-overlay' id='features'><h2>Data for state</h2><div id='pd'><p>Select a state!</p></div></div>
-          <div className='map-overlay-chart' id='features-chart'><h2>Timeline</h2>
-          <div id="chart">Select a state!</div>
+          <div className='map-overlay-chart' id='features-chart'>
+          <div id="chart"><br/>Select a state!</div>
           </div>
         </div>
         </div>

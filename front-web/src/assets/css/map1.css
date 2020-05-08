@@ -60,6 +60,11 @@ body {
     border-radius: 3px;
 }
 
+.chartMap{
+    margin: auto;
+    width: 95%;
+}
+
 .map-overlay-chart {
     position: absolute;
     left: 0;
@@ -86,7 +91,7 @@ body {
 }
 #features-chart{
     bottom: 0;
-    height: 100px;
+    /* height: 100px; */
     margin-bottom: 20px;
     margin-left: 10px;
     width: 40%;
