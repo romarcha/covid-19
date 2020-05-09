@@ -104,4 +104,10 @@ df = data.frame(target_date      = prediction$date,
 
 setwd(wkdir)
 
+files_in_dir = list.files()
+if("summary" %in% files_in_dir == F){
+  dir.create("summary")
+}
+setwd(paste0(wkdir, "/summary/"))
+
 write.csv(df, paste0(model, "-summary.csv"), row.names = F)
