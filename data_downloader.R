@@ -58,6 +58,11 @@
 # First result reported date for each model updated on 8 May 2020.
 ###############################################################################################################
 
+# Packages
+packages = c("RCurl", "downloader")
+install.packages(packages)
+lapply(packages, require, character.only = T)
+
 # Path to working directory
 wkdir = "~/Code/covid-19"
 
@@ -80,12 +85,12 @@ model = c("Auquan",
           "JHU_IDD",
           "JHU_IDD_High",
           "JHU_IDD_Mod",
-          "LANL (States cum)",
-          "LANL (States cum)",
-          "LANL (States inc)",
-          "LANL (States inc)",
-          "LANL (Global cum)",
-          "LANL (Glocal inc)",
+          "LANL_states_cum",
+          "LANL_states_cum",
+          "LANL_states_inc",
+          "LANL_states_inc",
+          "LANL_global_cum",
+          "LANL_glocal_inc",
           "MIT",
           "MOBS",
           "NotreDame",
@@ -96,10 +101,10 @@ model = c("Auquan",
           "UChicago100",
           "UMass_Exp",
           "UMass_MB",
-          "UT (States)",
-          "UT (US)",
-          "YYG (States)",
-          "YYG (Global)")
+          "UT_states",
+          "UT_US",
+          "YYG_states",
+          "YYG_global")
 
 # Link to download page
 model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Auquan-SEIR/",
