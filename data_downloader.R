@@ -14,7 +14,7 @@
 #
 # Geneva      - Data for: Global.
 #
-# IHME        - Data for: US national and states.
+# IHME        - Data for: Global and US states.
 #
 # Imperial    - Data for: US national.
 #               Note: Data from Reich Lab Github page. 2 different models available.
@@ -57,6 +57,8 @@
 #
 # First result reported date for each model updated on 8 May 2020.
 ###############################################################################################################
+# Set time zone as AEDT
+Sys.setenv(TZ="Australia/Sydney")
 
 # Packages
 packages = c("RCurl", "downloader")
@@ -90,7 +92,7 @@ model = c("Auquan",
           "LANL_states_inc",
           "LANL_states_inc",
           "LANL_global_cum",
-          "LANL_glocal_inc",
+          "LANL_global_inc",
           "MIT",
           "MOBS",
           "NotreDame",
