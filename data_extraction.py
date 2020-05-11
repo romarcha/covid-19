@@ -81,6 +81,7 @@ class PredictionDataset:
             performance_df['ev'] = state_df.reindex(aux_gt_df.index)['deaths_mean']
             performance_df['lb'] = state_df.reindex(aux_gt_df.index)['deaths_lower']
             performance_df['ub'] = state_df.reindex(aux_gt_df.index)['deaths_upper']
+            
             # Only for new york use the data from the new york times
             if state[1] == "New York":
                 performance_df['gt'] = aux_gt_df['delta_deaths_nyt']
@@ -89,7 +90,17 @@ class PredictionDataset:
 
             performance_df['gt_ihme'] = aux_gt_df['delta_deaths_ihme']
             performance_df['gt_nyt'] = aux_gt_df['delta_deaths_nyt']
+
+            n_smoothing = 10
+            for smooth_id in range(1, n_smoothing+1):
+                performance_df['gt_cum_jhu_ma'+str(smooth_id)] = aux_gt_df['cum_deaths_jhu_ma' + str(smooth_id)]
+                performance_df['gt_jhu_ma'+str(smooth_id)] = aux_gt_df['delta_deaths_jhu_ma'+str(smooth_id)]
+                performance_df['gt_jhu_delog_ma'+str(smooth_id)] = aux_gt_df['delta_deaths_jhu_delog_ma' + str(smooth_id)]
+
+            # Observed - estimated
             performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.reindex(aux_gt_df.index)['deaths_mean']
+            for smooth_id in range(1, n_smoothing + 1):
+                performance_df['error'+str(smooth_id)] = performance_df['gt_jhu_delog_ma'+str(smooth_id)] - state_df.reindex(aux_gt_df.index)['deaths_mean']
 
             # Fill up all performance values with default value
             performance_df['PE'] = np.nan
@@ -100,12 +111,18 @@ class PredictionDataset:
                 if row['ev'] == 0 and row['gt'] == 0:
                     performance_df.at[i, 'PE'] = 0
                     performance_df.at[i, 'Adj PE'] = 0
-                elif pd.isna(row['ev']) or pd.isna('gt'):
+                elif row['gt'] < 0:
+                    performance_df.at[i, 'PE'] = np.nan
+                    performance_df.at[i, 'Adj PE'] = np.nan
+                elif pd.isna(row['ev']) or pd.isna(row['gt']):
                     performance_df.at[i, 'PE'] = np.nan
                     performance_df.at[i, 'Adj PE'] = np.nan
                 elif not row['ev'] == 0 and row['gt'] == 0:
                     performance_df.at[i, 'PE'] = np.inf
                     performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
+                elif (row['ev']+row['gt']) == 0:
+                    performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
+                    performance_df.at[i, 'Adj PE'] = np.nan
                 else:
                     performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
                     performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
@@ -201,11 +218,8 @@ class CovidPredictionEvaluator:
 
     def plot_results(self):
         # First plot consists of showing one-two-three and four steps lookahead by date on a box plot with the states.
-        init_date = pd.to_datetime("2020-03-30")
-        final_date = pd.to_datetime("2020-04-16")
-
         # Table of percentage within, below and above PIs
-        date_range = pd.date_range(start="2020-03-30", end="2020-04-16")
+        date_range = pd.date_range(start="2020-03-30", end="2020-05-05")
         with open(self.model_directory+'PI_table.tex', mode='w') as file_:
             file_.write("\\begin{tabular}\n")
             file_.write("{ | l | c | c | c | c |}\n")
@@ -363,16 +377,33 @@ class CovidPredictionEvaluator:
                 jhu_tmp = jhu_df[jhu_df["Province_State"] == state[1]]
                 #Sum per state, and filter for the dates containing 2020 as /20
                 jhu_sum_series = jhu_tmp.sum(axis=0).filter(like='/20')
+                jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
+                state_df['cum_deaths_jhu'] = jhu_sum_series
+                n_smoothing = 10
+                for smooth_id in range(1, n_smoothing+1):
+                    if smooth_id == 1:
+                        state_df['cum_deaths_jhu_ma'+str(smooth_id)] = jhu_sum_series.rolling(3, center=True).sum()/3
+                        state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)] = np.log(jhu_sum_series.astype(float)).rolling(3, center=True).sum() / 3
+                    else:
+                        state_df['cum_deaths_jhu_ma' + str(smooth_id)] = state_df['cum_deaths_jhu_ma' + str(smooth_id-1)].rolling(3, center=True).sum() / 3
+                        state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)] = state_df['cum_deaths_jhu_log_ma_' + str(smooth_id-1)].rolling(3, center=True).sum() / 3
+                    state_df['delta_deaths_jhu_ma' + str(smooth_id)] = state_df['cum_deaths_jhu_ma' + str(smooth_id)].diff()
+                    state_df['delta_deaths_jhu_ma' + str(smooth_id)].fillna(0)
+                    state_df['delta_deaths_jhu_delog_ma' + str(smooth_id)] = np.exp(state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)]).diff()
+                    state_df['delta_deaths_jhu_delog_ma' + str(smooth_id)].fillna(0)
                 jhu_sum_series = jhu_sum_series.diff()
                 jhu_sum_series = jhu_sum_series.fillna(0)
-                jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
-                state_df['delta_deaths_jhu'] = jhu_sum_series.reindex(state_df.index)
+                state_df['delta_deaths_jhu'] = jhu_sum_series
 
                 self.gt_data = self.gt_data.append(state_df, sort=True)
 
             except KeyError as raised_error:
                 print("Captured Key Error "+str(raised_error))
+        print("Finished organising state data")
 #        self.gt_data = self.gt_data.dropna()
+
+    def smooth_timeseries(self, series):
+        return series
 
     def evaluate_area_overlap_matrix(self):
         # Evaluate the overlap in total area between one model and the rest, summed for all states.
@@ -399,5 +430,5 @@ evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="IHME")
 evaluator.plot_results()
 evaluator.get_all_data_as_csv()
 evaluator.get_state_data_as_csv()
-evaluator.upload_to_db()
+#evaluator.upload_to_db()
 print("Written results to csv")
