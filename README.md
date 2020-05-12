@@ -85,8 +85,8 @@ pip install -r requirements.txt
 - [ ] [YYG](https://covid19-projections.com/)
 - [ ] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
 - [ ] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
-- [ ]
-- [ ]
+- [ ] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
+- [ ] [LANL](https://covid-19.bsvgateway.org/)
 - [ ]
 
 
