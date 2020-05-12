@@ -82,7 +82,14 @@ pip install -r requirements.txt
 - [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
 - [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
 - [ ] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
-- 
+- [ ] [YYG](https://covid19-projections.com/)
+- [ ] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
+- [ ] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
+- [ ]
+- [ ]
+- [ ]
+
+
 ## Useful Links
 
 - CDC Forecasting COVID Comparisons [https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html)
