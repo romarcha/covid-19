@@ -79,7 +79,7 @@ pip install -r requirements.txt
 | outside_95p_by   | double | if inside 0, if outside is the amount by which it is outside of the 95% prediction interval |
 
 ## Data Models
-- CU models (Columbia University) [https://github.com/shaman-lab/COVID-19Projection]
+- CU models [Columbia University] (https://github.com/shaman-lab/COVID-19Projection)
 
 ## Useful Links
 
