@@ -98,17 +98,15 @@ logistic_adj_ape = 1 / (1 + exp(-adj_ape/100))
 above = all_merge$incident.death > all_merge$q.975
 below = all_merge$incident.death < all_merge$q.025
 
-within_95_pi                                  = rep("inside", nrow(all_merge))
-within_95_pi[is.na(all_merge$incident.death)] = NA
-within_95_pi[which(above==T)]                 = "above"
-within_95_pi[which(below==T)]                 = "below"
+within_95_pi                             = rep(NA, nrow(all_merge))
+within_95_pi[which(above==F & below==F)] = "inside"
+within_95_pi[which(above==T)]            = "above"
+within_95_pi[which(below==T)]            = "below"
 
-outside_95p_by                                  = rep(0, nrow(all_merge))
-outside_95p_by[is.na(all_merge$incident.death)] = NA
-outside_95p_by[which(above==T)]                 = all_merge$incident.death[which(above==T)] - 
-                                                  all_merge$q.975[which(above==T)]
-outside_95p_by[which(below==T)]                 = all_merge$incident.death[which(below==T)] - 
-                                                  all_merge$q.025[which(below==T)]
+outside_95p_by                             = rep(NA, nrow(all_merge))
+outside_95p_by[which(above==F & below==F)] = 0
+outside_95p_by[which(above==T)]            = all_merge$incident.death[which(above==T)] - all_merge$q.975[which(above==T)]
+outside_95p_by[which(below==T)]            = all_merge$incident.death[which(below==T)] - all_merge$q.025[which(below==T)]
 
 df = data.frame(target_date      = all_merge$dates, 
                 forecast_date    = all_merge$fcst_date, 

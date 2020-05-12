@@ -61,8 +61,6 @@ adj_ape          = abs(adj_pe)
 logistic_ape     = 1 / (1 + exp(-ape/100))
 logistic_adj_ape = 1 / (1 + exp(-adj_ape/100))
 
-above          = NA
-below          = NA
 within_95_pi   = NA
 outside_95p_by = NA
 

@@ -52,7 +52,7 @@ for(i in 1:length(model)){
   if(model[i] == "UT_US"){
     location_short = "USA"
   }else{
-    location_short = mapvalues(all_merge$state, from=state.name, to=state.abb)
+    location_short = mapvalues(all_merge$state, from=c(state.name, "District of Columbia"), to=c(state.abb, "DC"))
   }
   
   # Calculating various measure
@@ -75,7 +75,7 @@ for(i in 1:length(model)){
   df = data.frame(target_date      = all_merge$date, 
                   forecast_date    = all_merge$forecast_date, 
                   lookahead        = difftime(all_merge$date, all_merge$forecast_date, units="days"),
-                  model_name       = model[i],
+                  model_name       = "UT",
                   location_long    = location_long,
                   location_short   = location_short,
                   prediction_type  = "90PI",
