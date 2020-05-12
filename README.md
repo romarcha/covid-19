@@ -78,6 +78,9 @@ pip install -r requirements.txt
 | within_95_pi     | string | inside, above or below of the 95% prediction intervals |
 | outside_95p_by   | double | if inside 0, if outside is the amount by which it is outside of the 95% prediction interval |
 
+## Data Models
+- CU models (Columbia University) [https://github.com/shaman-lab/COVID-19Projection]
+
 ## Useful Links
 
 - CDC Forecasting COVID Comparisons [https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html)
