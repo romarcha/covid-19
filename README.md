@@ -81,7 +81,7 @@ pip install -r requirements.txt
 ## Data Models
 - [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
 - [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
-- [x] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
+- [ ] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
 - 
 ## Useful Links
 
