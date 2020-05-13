@@ -91,7 +91,7 @@ pip install -r requirements.txt
 - [ ] [Auquan]()
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
 - [ ] [GA_Tech]()
-- [ ] [IowaStateLW]()
+- [x] [IowaStateLW]()
 - [ ] [JHU_IDD]()
 - [ ] [MIT](https://www.covidanalytics.io/)
 - [ ] [MOBS]()
