@@ -57,7 +57,7 @@ col_names=c("target_date",
 locations=c("Alabama",
             "Alaska",
             "Arizona",
-            "Arkansas",
+            "Arkansas"
             )
 
 download.file("https://github.com/CSSEGISandData/COVID-19/raw/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv","jhu_truth.csv")
