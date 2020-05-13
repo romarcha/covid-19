@@ -54,17 +54,15 @@ logistic_adj_ape = 1 / (1 + exp(-adj_ape/100))
 above = prediction$actual_deaths > prediction$predicted_deaths_upper
 below = prediction$actual_deaths < prediction$predicted_deaths_lower
 
-within_95_pi                                  = rep("inside", nrow(prediction))
-within_95_pi[is.na(prediction$actual_deaths)] = NA
-within_95_pi[which(above==T)]                 = "above"
-within_95_pi[which(below==T)]                 = "below"
+within_95_pi                             = rep(NA, nrow(prediction))
+within_95_pi[which(above==F & below==F)] = "inside"
+within_95_pi[which(above==T)]            = "above"
+within_95_pi[which(below==T)]            = "below"
 
-outside_95p_by                                  = rep(0, nrow(prediction))
-outside_95p_by[is.na(prediction$actual_deaths)] = NA
-outside_95p_by[which(above==T)]                 = prediction$actual_deaths[which(above==T)] - 
-                                                  prediction$predicted_deaths_upper[which(above==T)]
-outside_95p_by[which(below==T)]                 = prediction$actual_deaths[which(below==T)] - 
-                                                  prediction$predicted_deaths_lower[which(below==T)]
+outside_95p_by                             = rep(NA, nrow(prediction))
+outside_95p_by[which(above==F & below==F)] = 0
+outside_95p_by[which(above==T)]            = prediction$actual_deaths[which(above==T)] - prediction$predicted_deaths_upper[which(above==T)]
+outside_95p_by[which(below==T)]            = prediction$actual_deaths[which(below==T)] - prediction$predicted_deaths_lower[which(below==T)]
 
 df = data.frame(target_date      = prediction$date, 
                 forecast_date    = prediction$forecast_date, 

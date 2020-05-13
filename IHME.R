@@ -62,7 +62,7 @@ jhu_truth_states = aggregate(.~Province_State, jhu_truth_states, sum)
 jhu_truth_states = jhu_truth_states[jhu_truth_states$Province_State!="New York",]
 cum_death_states = jhu_truth_states[,13:ncol(jhu_truth_states)]
 inc_death_states = apply(cum_death_states, 1, diff)
-if (all(inc_death_global>=0)==F){
+if (all(inc_death_states>=0)==F){
   warning("Negative incident deaths reported in ground truth data!")
 }
 jhu_truth_states = data.frame(location_name=rep(jhu_truth_states$Province_State, each=nrow(inc_death_states)), 
@@ -108,17 +108,15 @@ logistic_adj_ape = 1 / (1 + exp(-adj_ape/100))
 above = all_merge$incident.death > all_merge$deaths_upper
 below = all_merge$incident.death < all_merge$deaths_lower
 
-within_95_pi                                  = rep("inside", nrow(all_merge))
-within_95_pi[is.na(all_merge$incident.death)] = NA
-within_95_pi[which(above==T)]                 = "above"
-within_95_pi[which(below==T)]                 = "below"
+within_95_pi                             = rep(NA, nrow(all_merge))
+within_95_pi[which(above==F & below==F)] = "inside"
+within_95_pi[which(above==T)]            = "above"
+within_95_pi[which(below==T)]            = "below"
 
-outside_95p_by                                  = rep(0, nrow(all_merge))
-outside_95p_by[is.na(all_merge$incident.death)] = NA
-outside_95p_by[which(above==T)]                 = all_merge$incident.death[which(above==T)] - 
-                                                  all_merge$deaths_upper[which(above==T)]
-outside_95p_by[which(below==T)]                 = all_merge$incident.death[which(below==T)] - 
-                                                  all_merge$deaths_lower[which(below==T)]
+outside_95p_by                             = rep(NA, nrow(all_merge))
+outside_95p_by[which(above==F & below==F)] = 0
+outside_95p_by[which(above==T)]            = all_merge$incident.death[which(above==T)] - all_merge$deaths_upper[which(above==T)]
+outside_95p_by[which(below==T)]            = all_merge$incident.death[which(below==T)] - all_merge$deaths_lower[which(below==T)]
 
 df = data.frame(target_date      = all_merge$date, 
                 forecast_date    = all_merge$forecast_date, 
