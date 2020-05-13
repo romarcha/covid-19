@@ -81,13 +81,23 @@ pip install -r requirements.txt
 ## Data Models
 - [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
 - [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
-- [ ] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
-- [ ] [YYG](https://covid19-projections.com/)
-- [ ] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
-- [ ] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
-- [ ] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
-- [ ] [LANL](https://covid-19.bsvgateway.org/)
-- [ ]
+- [x] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
+- [x] [YYG](https://covid19-projections.com/)
+- [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
+- [x] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
+- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
+- [x] [LANL](https://covid-19.bsvgateway.org/)
+- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
+- [ ] [Auquan]()
+- [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
+- [ ] [GA_Tech]()
+- [ ] [IowaStateLW]()
+- [ ] [JHU_IDD]()
+- [ ] [MIT](https://www.covidanalytics.io/)
+- [ ] [MOBS]()
+- [ ] [UCLA]()
+- [ ] [UChicago]()
+- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)[UMass](https://github.com/dsheldon/covid)
 
 
 ## Useful Links
