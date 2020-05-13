@@ -46,7 +46,10 @@ CU_convertor = function(raw_file,col_names){
   }
   
   for(i in 1:nrow(target_data)){ # fill in the ground truth data
-    target_data$gt_jhu[i]= sum(truth[target_data$location_long[i]][[1]][target_data$forecast_date[i]])
+    if( Sys.Date()- as.Date(target_data$target_date[i]) >0){
+      target_data$gt_jhu[i]= sum(truth[target_data$location_long[i]][[1]][target_data$target_date[i]])
+    }
+    
   } 
   return(target_data)
 }

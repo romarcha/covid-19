@@ -41,7 +41,9 @@ Imperial_convertor = function(raw_file,col_names){
 
   
   for(i in 1:nrow(target_data)){ # fill in the ground truth data
-    target_data$gt_ecdc[i]= US_truth[US_truth$date== target_data$forecast_date[i],2]
-  } 
+    if( Sys.Date()- as.Date(target_data$target_date[i]) >0){
+    target_data$gt_ecdc[i]= US_truth[US_truth$date== target_data$target_date[i],2]
+    } 
+  }
   return(target_data)
 }
