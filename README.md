@@ -88,7 +88,7 @@ pip install -r requirements.txt
 - [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
 - [x] [LANL](https://covid-19.bsvgateway.org/)
 - [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
-- [ ] [Auquan]()
+- [x] [Auquan](https://covid19-infection-model.auquan.com/)
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
 - [ ] [GA_Tech]()
 - [x] [IowaStateLW]()
