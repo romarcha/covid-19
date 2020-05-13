@@ -92,7 +92,7 @@ pip install -r requirements.txt
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
 - [ ] [GA_Tech]()
 - [x] [IowaStateLW]()
-- [ ] [JHU_IDD]()
+- [x] [JHU_IDD]()
 - [ ] [MIT](https://www.covidanalytics.io/)
 - [ ] [MOBS]()
 - [ ] [UCLA]()
