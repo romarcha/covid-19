@@ -78,6 +78,28 @@ pip install -r requirements.txt
 | within_95_pi     | string | inside, above or below of the 95% prediction intervals |
 | outside_95p_by   | double | if inside 0, if outside is the amount by which it is outside of the 95% prediction interval |
 
+## Data Models
+- [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
+- [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
+- [x] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
+- [x] [YYG](https://covid19-projections.com/)
+- [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
+- [x] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
+- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
+- [x] [LANL](https://covid-19.bsvgateway.org/)
+- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
+- [x] [Auquan](https://covid19-infection-model.auquan.com/)
+- [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
+- [ ] [GA_Tech]()
+- [x] [IowaStateLW]()
+- [x] [JHU_IDD]()
+- [ ] [MIT](https://www.covidanalytics.io/)
+- [ ] [MOBS]()
+- [ ] [UCLA]()
+- [ ] [UChicago]()
+- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)[UMass](https://github.com/dsheldon/covid)
+
+
 ## Useful Links
 
 - CDC Forecasting COVID Comparisons [https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html](https://www.cdc.gov/coronavirus/2019-ncov/covid-data/forecasting-us.html)
