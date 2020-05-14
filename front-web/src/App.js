@@ -8,14 +8,19 @@ import data from "./data/out.geojson"
 import Checkbox from './components/checkbox'
 import checkboxes from './data/checkboxes'
 import geometry from './data/geometry'
-import Chart from "react-google-charts";
-import d3Foresight from "d3-foresight"
+import CanvasJSReact from './assets/canvas/canvasjs.react'
+import ClipLoader from "react-spinners/ClipLoader";
+import Modal from 'react-modal';
+import expand_icon from './assets/interface.png'
+import minimize_icon from './assets/minimize.png'
+import alternate_icon from './assets/directions.png'
 
 const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
 // const ROOT_URL = 'http://localhost:3500'
-mapboxgl.accessToken = 'pk.eyJ1IjoibWFudWVsdXpjYXRlZ3VpIiwiYSI6ImNrOWs4OHdtNTAzcnczbm1rbnFqb3JzangifQ.L0zmTAujoe3rq_fG--1LDw';
+mapboxgl.accessToken = 'pk.eyJ1Ijoicm1hcjUyNTgiLCJhIjoiY2s5eHl1Y244MGtpNTNrcXdoZ3oyYjVqeCJ9.fkrVlktDGk0CNJieDExeVg';
 
 var map;
+var CanvasJSChart = CanvasJSReact.CanvasJSChart;
 
 class App extends Component {
   constructor(props) {
@@ -24,24 +29,115 @@ class App extends Component {
     this.state = {
       date: '2020-03-29',
       lookahead: '1',
-      geoData: {},
       checkedItemsDate: new Map(),
       checkedItemsLookahead: new Map(),
-      states_lines_data: []
-      
+      states_lines_data: [],
+      loading: true,
+      showModal: false,
+      selected: false,
+      active_models: ['2020-03-29'],
+      fill: "PE",
+      chart: {},
+      chart_options: {
+        height: window.screen.height*0.35,
+        theme: "light1",
+        animationEnabled: true,
+        exportEnabled: true,
+        zoomEnabled: true,
+        title: {
+          text: "Deaths per Day",
+          fontColor: 'black',
+          fontWeight: 'bold',
+          padding: 10
+        },
+        subtitles: [{
+          text: ""
+        }],
+        axisX:{
+          stripLines:[
+            {             
+              color:"#d8d8d8",
+              label : "Label 1",
+              labelFontColor: "#a8a8a8"
+            }
+          ]
+        },
+        legend: {
+          horizontalAlign: "right",
+          verticalAlign: "top"
+        },
+        scaleBreaks: {
+					autoCalculate: true
+				},
+        data: [
+        {
+          type: "line",
+          lineDashType: "dash",
+          color: '#1a1a1a',
+          lineThickness: 1,
+          showInLegend: true, 
+          name: "series1",
+          legendText: "OBSERVED",
+          dataPoints: [
+          ]
+        },
+        {
+          type: "line",
+          color: '#006699',
+          lineThickness: 3,
+          showInLegend: true, 
+          name: "series2",
+          legendText: "EXPECTED VALUE",
+          dataPoints: [
+          ]
+        },
+        {
+          type: "rangeSplineArea",
+          color: '#0066cc',
+          fillOpacity: 0.4,
+          lineThickness: 0,
+          showInLegend: true, 
+          name: "series3",
+          legendText: "PREDICTION INTERVAL",
+          toolTipContent: "{x}<br><b>UB:</b> {y[1]}<br><b>LB:</b> {y[0]}",
+          dataPoints: [
+          ]
+        },
+        {
+          type: "line",
+          color: '#1a1a1a',
+          lineThickness: 1,
+          dataPoints: [
+          ]
+        }
+        ]
+      },
+      customStyles: {
+        content : {
+          top: '50%',
+          left: '50%',
+          right: 'auto',
+          bottom: 'auto',
+          marginRight: '-50%',
+          transform: 'translate(-50%, -50%)',
+          width: '50%'
+        }
+      }       
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleChangeLookahead = this.handleChangeLookahead.bind(this);
-    // this.handleSubmit = this.handleSubmit.bind(this);
     this.create_geojson = this.create_geojson.bind(this);
     this.update_map = this.update_map.bind(this);
     this.create_charts = this.create_charts.bind(this);
+    this.handleOpenModal = this.handleOpenModal.bind(this);
+    this.handleCloseModal = this.handleCloseModal.bind(this);
+    this.handleChangefill = this.handleChangefill.bind(this);
   }
 
   async componentDidMount() {
     map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/manueluzcategui/ck9vj0ls40m6g1iomdco2kw9e',
+    style: 'mapbox://styles/rmar5258/cka410a630xu21jpf514iqyfc',
     center: [-100.486052, 37.830348],
     zoom: 3
     });
@@ -61,29 +157,13 @@ class App extends Component {
       'fill-color': [
         'interpolate',
         ['linear'],
-        ['get', 'error'],
-        -50,
-        '#0e4d65',
-        -40,
-        '#10667d',
-        -30,
-        '#128095',
-        -20,
-        '#149aad',
-        -10,
-        '#16b4c5',
-        0,
-        '#ffffff',
-        10,
-        '#16b4c5',
-        20,
-        '#149aad',
-        30,
-        '#128095',
-        40,
-        '#10667d',
-        50,
-        '#0e4d65'
+        ['get', 'PE'],
+        -250,
+         'rgba(17,6,201,1)',
+         0,
+         'white',
+         250,
+         'rgba(228,9,9,1)'
         ],
     'fill-opacity': [
     'case',
@@ -93,18 +173,39 @@ class App extends Component {
     ]
     }
     });
+    map.addLayer({
+      'id': 'state-fills-undefined',
+      'type': 'fill',
+      'source': 'states',
+      'layout': {},
+      'filter': ['==','PE',''],
+      'paint': {
+        'fill-color': '#767676',
+        'fill-opacity': 0.8
+      }
+    });
     map.moveLayer('state-fills', 'state-label');
+    map.moveLayer('state-fills-undefined', 'state-label');
     map.addLayer({
       'id': 'state-borders',
       'type': 'line',
       'source': 'states',
       'layout': {},
       'paint': {
-      'line-color': '#0e4d65',
+      'line-color': '#B3B6B7',
       'line-width': 1
       }
-      });
-
+    });
+    map.addLayer({
+      'id': 'select-borders',
+      'type': 'line',
+      'source': 'states',
+      'layout': {},
+      'paint': {
+      'line-color': '#B3B6B7',
+      'line-width': 1
+      }
+    });
     map.on('mousemove', 'state-fills', function(e) {
     if (e.features.length > 0) {
     if (hoveredStateId) {
@@ -134,77 +235,87 @@ class App extends Component {
 
     map.on('click', (e) => {
         var states = map.queryRenderedFeatures(e.point, {
-            // layout: "state-fills"
         });
         if (states.length > 0) {
             if (states[0].properties.date !== undefined){
+              document.getElementById('features').style.display = 'block';
               document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
-              '<p><strong>date: ' + states[0].properties.date + '</strong></p>'+
-              '<p><strong>ev: ' + parseFloat(states[0].properties.ev).toFixed(2) + '</strong></p>'+
-              '<p><strong>lb: ' + parseFloat(states[0].properties.lb).toFixed(2) + '</strong></p>'+
-              '<p><strong>ub: ' + parseFloat(states[0].properties.ub).toFixed(2) + '</strong></p>'+
-              '<p><strong>gt: ' + parseFloat(states[0].properties.gt).toFixed(2) + '</strong></p>'+
-              '<p><strong>error: ' + parseFloat(states[0].properties.error).toFixed(2) + '</strong></p>'+
-              '<p><strong>PE: ' + parseFloat(states[0].properties.PE).toFixed(2) + '</strong></p>'+
-              '<p><strong>Adj PE: ' + parseFloat(states[0].properties['Adj PE']).toFixed(2) + '</strong></p>'+
-              '<p><strong>APE: ' + parseFloat(states[0].properties.APE).toFixed(2) + '</strong></p>'+
-              '<p><strong>Adj APE: ' + parseFloat(states[0].properties['Adj APE']).toFixed(2) + '</strong></p>'+
-              '<p><strong>LAPE: ' + parseFloat(states[0].properties.LAPE).toFixed(2) + '</strong></p>'+
-              '<p><strong>LAdj APE: ' + states[0].properties['LAdj APE'] + '</strong></p>'+
-              '<p><strong>last_obs_date: ' + states[0].properties.last_obs_date + '</strong></p>'+
-              '<p><strong>within_PI: ' + states[0].properties.within_PI + '</strong></p>'+
-              '<p><strong>outside_by: ' + states[0].properties.outside_by + '</strong></p>'+
-              '<p><strong>model_name: ' + states[0].properties.model_name + '</strong></p>'+
-              '<p><strong>lookahead: ' + states[0].properties.lookahead + '</strong></p>'
-              let dataChart = [
-                [{ type: 'date', label: 'Day' },
-                { type: 'number', label: 'GT' },
-                { type: 'number', label: 'LB' },
-                { type: 'number', label: 'EV' },
-                { type: 'number', label: 'UB' }]
-              ]
-              let temp_data = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
-                return [new Date(element.date),parseFloat(element.gt),parseFloat(element.lb),parseFloat(element.ev),parseFloat(element.ub)]
+              '<table><tr><th></th><th></th></tr>'+
+              '<tr><td>Date</td><td>' + states[0].properties.date.split('T')[0] + '</td></tr>'+
+              '<tr><td>Expected Value</td><td>' + parseFloat(states[0].properties.ev).toFixed(2) + '</td></tr>'+
+              '<tr><td>Lower Bound</td><td>' + parseFloat(states[0].properties.lb).toFixed(2) + '</td></tr>'+
+              '<tr><td>Upper Bound</td><td>' + parseFloat(states[0].properties.ub).toFixed(2) + '</td></tr>'+
+              '<tr><td>Ground Truth</td><td>' + parseFloat(states[0].properties.gt).toFixed(2) + '</td></tr>'+
+              '<tr><td>Error</td><td>' + parseFloat(states[0].properties.error).toFixed(2) + '</td></tr>'+
+              '<tr><td>Percentage Error</td><td>' + parseFloat(states[0].properties.PE).toFixed(2) + '</td></tr>'+
+              '<tr><td>Adjusted PE</td><td>' + parseFloat(states[0].properties['Adj PE']).toFixed(2) + '</td></tr>'+
+              '<tr><td>Absolute PE</td><td>' + parseFloat(states[0].properties.APE).toFixed(2) + '</td></tr>'+
+              '<tr><td>Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['Adj APE']).toFixed(2) + '</td></tr>'+
+              '<tr><td>Logistic Absolute PE</td><td>' + parseFloat(states[0].properties.LAPE).toFixed(2) + '</td></tr>'+
+              '<tr><td>Logistic Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['LAdj APE']).toFixed(2) + '</td></tr>'+
+              '<tr><td>Last Observation Date</td><td>' + states[0].properties.last_obs_date.split('T')[0] + '</td></tr>'+
+              '<tr><td>Within Intervale Prediction</td><td>' + states[0].properties.within_PI + '</td></tr>'+
+              '<tr><td>Outside by</td><td>' + states[0].properties.outside_by + '</td></tr>'+
+              '<tr><td>Model Name</td><td>' + states[0].properties.model_name + '</td></tr>'+
+              '<tr><td>Lookahead</td><td>' + states[0].properties.lookahead + '</td></tr>'+
+              '</table>'
+              let ev = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
+                return {x: new Date(element.date),y: parseFloat(element.ev)}
               })
-              console.log(temp_data)
-              for (var date_element in temp_data){
-                dataChart.push(temp_data[date_element])
-              }
-              const element = (
-              <div>
-              <h2>Timeline: {states[0].properties.name}</h2>
-              <Chart
-                className="chartMap"
-                chartType="LineChart"
-                loader={<div>Loading Chart</div>}
-                data={dataChart}
-                options={{
-                  // title: states[0].properties.name,
-                  // titleTextStyle: {fontSize: 24},
-                  explorer: { 
-                    actions: ['dragToZoom', 'rightClickToReset'],
-                    axis: 'horizontal',
-                    keepInBounds: true,
-                    maxZoomIn: 10.0},
-                    // series: { 
-                    //   0: {color: '#76737D',areaOpacity: 0},
-                    //   1: {color: '#33BEFF',areaOpacity: 0.5, lineWidth: 0},
-                    //   2: {color: '#195F80',areaOpacity: 0}, 
-                    //   3: {color: '#FF4C42',areaOpacity: 0.2, lineWidth: 0} 
-                    // },
-                    // colors: ['black','red','blue','green'],
-                  
-                }}
-                />
-                </div>
-                );
-              ReactDOM.render(element, document.getElementById('chart'));
+              let gt = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
+                return {x: new Date(element.date),y: parseFloat(element.gt)}
+              })
+              let gt_previous_last_obs = this.state.states_lines_data.filter(element => (element.state_short === states[0].properties.short_name)&&(new Date(element.date) < new Date(states[0].properties.last_obs_date))).map(function(element){
+                  return {x: new Date(element.date),y: parseFloat(element.gt)}
+              })
+              let range = this.state.states_lines_data.filter(element => element.state_short === states[0].properties.short_name).map(function(element){
+                  return {x: new Date(element.date),y: [parseFloat(element.lb),parseFloat(element.ub)]}              
+              })
+              ev.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
+              gt.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
+              range.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
+              this.state.chart.data[0].set("dataPoints", gt)
+              this.state.chart.data[1].set("dataPoints", ev)
+              this.state.chart.data[1].set("legendText", states[0].properties.model_name+'-EXPECTED VALUE')
+              this.state.chart.data[2].set("dataPoints", range)
+              this.state.chart.data[3].set("dataPoints", gt_previous_last_obs)
+              this.state.chart.subtitles[0].set("text",states[0].properties.name)
+              this.state.chart.set("axisX",{stripLines: [{
+                startValue: new Date('2020-01-01'),
+                endValue: new Date(states[0].properties.last_obs_date),
+                color: '#b3b3b3',
+                lineDashType: 'dash',
+                opacity: 0.2
+              }],
+              viewportMinimum: new Date('2020-02-01'),
+              viewportMaximum: new Date('2020-07-01'),})
+              this.state.chart.set("axisY", {
+                viewportMinimum: -5
+              })
+              map.setFilter('select-borders',['==',['get', 'name'], states[0].properties.name])
+              map.setPaintProperty('select-borders', 'line-width', 3);
+              // map.setPaintProperty('select-borders', 'line-color', 'black');
+            } else {
+              document.getElementById('features').style.display = 'none';
+              map.setFilter('select-borders',['==',['get', 'name'], false])
             }               
-        } 
+        } else {
+          document.getElementById('features').style.display = 'none';
+          map.setFilter('select-borders',['==',['get', 'name'], false])
+        }
         });
         this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(this.state.date, true) }));
         this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(this.state.lookahead, true) }));
         this.create_charts(this.state.date)
+        Modal.setAppElement('body');
+        document.getElementById('features').style.display = 'none';
+  }
+
+  handleOpenModal() {
+    this.setState({ showModal: true });
+  }
+  handleCloseModal() {
+    this.setState({ showModal: false });
   }
 
   async read_database(date,lookahead){
@@ -224,6 +335,9 @@ class App extends Component {
     let object = {}
     object['type'] = 'FeatureCollection'
     let features = data.map(function(element, index){
+      if(element.PE == null){
+        element.PE = ''
+      }
       let dict = {}
       dict['type'] = 'Feature'
       dict['id'] = index
@@ -252,16 +366,15 @@ class App extends Component {
       return dict
     })
     object['features'] = features
-    this.setState({geoData: object})
     this.update_map(object)
   }
 
   update_map(geojson){
-    // console.log(geojson)
     map.getSource('states').setData(geojson);
   }
 
   async create_charts(date){
+    this.setState({loading: true})
     let data = await axios.get(ROOT_URL+'/timeLines', {
       headers: {'model_date': date}
       })
@@ -272,8 +385,8 @@ class App extends Component {
         console.log(error);
     })
     this.setState({states_lines_data: data.data})
+    this.setState({loading: false})
   }
-
 
   async handleChange(e) {
     const item = e.target.name;
@@ -288,29 +401,76 @@ class App extends Component {
     }    
   }
   async handleChangeLookahead(e) {
-    const item = e.target.name;
-    const isChecked = e.target.checked;
-    if (isChecked !== false){
-      this.setState({checkedItemsLookahead: new Map()})
-      this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(item, isChecked) }));
-      this.setState({lookahead: parseFloat(item)})
-      let geoData = await this.read_database(this.state.date,parseFloat(item))
-      this.create_geojson(geoData)
-      this.create_charts(this.state.date)
-    }
+    this.setState({lookahead: e.target.value})
+    let geoData = await this.read_database(this.state.date,e.target.value)
+    this.create_geojson(geoData)
+    this.create_charts(this.state.date)
   }
-  // async handleSubmit(){
-  //   // let geoData = await this.read_database(this.state.date,this.state.lookahead)
-  //   // this.create_geojson(geoData)
-  //   this.create_charts()
-  // }
+
+  handleChangefill(){
+    let change = []
+    if (this.state.fill === 'PE'){
+        change = [
+        'interpolate',
+        ['linear'],
+        ['get', 'outside_by'],
+        -26,
+         'rgba(17,6,201,1)',
+         0,
+         'white',
+         26,
+         'rgba(228,9,9,1)'
+        ]
+        map.setFilter('state-fills-undefined',['==',['get', 'outside_by'],''])
+        this.setState({fill: "Outside"})
+        const element = (
+            <div>
+            <strong>Number of Deaths Outside PI</strong>
+            <span></span><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+            <h3 style={{position: 'absolute', left: 0, marginTop: '25px'}}>-26</h3>
+            <h3 style={{position: 'absolute', left: 96, marginTop: '25px'}}>0</h3>
+            <h3 style={{position: 'absolute', right: 0, marginTop: '25px'}}>26</h3>
+            </div>)
+        ReactDOM.render(element, document.getElementById('legend'));
+    } else {
+        change = [
+        'interpolate',
+        ['linear'],
+        ['get', 'PE'],
+        -250,
+        'rgba(17,6,201,1)',
+        0,
+        'white',
+        250,
+        'rgba(228,9,9,1)'
+        ]
+        map.setFilter('state-fills-undefined',['==',['get', 'PE'],''])
+        this.setState({fill: "PE"})
+        const element = (
+          <div>
+            <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+            <span></span>
+            <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
+            <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
+            <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
+          </div>)
+        ReactDOM.render(element, document.getElementById('legend'));
+    }    
+    map.setPaintProperty('state-fills', 'fill-color', change);
+  }
 
   render() {
     return (
       <div className="App">
         <div className="mapContainer">
-        <div>
           <div id='map'></div>
+          <div id='legend'>
+            <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+            <span></span>
+            <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
+            <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
+            <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
+          </div>
           <div className='map-overlay-select' id='features-selection'><h2>Select Model</h2>
             <div id='selection'>
             {
@@ -323,29 +483,38 @@ class App extends Component {
               ))
             }
             <h2>Select Lookahead</h2>
-            {
-              checkboxes[1].map(item => (
-                <label key={item.key}>
-                  {item.name}
-                  {item.key === "4"
-                  ? <React-Fragment><Checkbox name={item.name} checked={this.state.checkedItemsLookahead.get(item.name)} onChange={this.handleChangeLookahead} /><br/></React-Fragment>
-                  : <Checkbox name={item.name} checked={this.state.checkedItemsLookahead.get(item.name)} onChange={this.handleChangeLookahead} />
-                  }
-                </label>
-              ))
-            }
-            {/* <input style={{width: '50px'}} type="number" value={this.state.lookahead} onChange={this.handleChangeLookahead} onInput={this.handleInput} /> */}
+            <input type="range" onChange={this.handleChangeLookahead} min="1" max="7" value={this.state.lookahead}></input>
+            <br/><label>{this.state.lookahead}</label>
             <br/><br/>
-            {/* <button onClick={this.handleSubmit}>
-              send
-            </button> */}
             </div>
           </div>
-          <div className='map-overlay' id='features'><h2>Data for state</h2><div id='pd'><p>Select a state!</p></div></div>
-          <div className='map-overlay-chart' id='features-chart'>
-          <div id="chart"><br/>Select a state!</div>
+          <div className='map-overlay' id='features'><h2>Data for State</h2><div id='pd' className="table"><p>Select a state!</p></div></div>          
+          <div className='map-overlay-chart'>
+          <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
+          <ClipLoader
+            css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
+            size={50}
+            color={"#006699"}
+            loading={this.state.loading}
+          />
+          <CanvasJSChart options = {this.state.chart_options}
+            onRef = {ref => this.setState({chart: ref})}
+          />
           </div>
-        </div>
+          <Modal
+          isOpen={this.state.showModal}
+          style={this.state.customStyles}
+          >
+          <ClipLoader
+            css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
+            size={50}
+            color={"#006699"}
+            loading={this.state.loading}
+          />
+          <CanvasJSChart options = {this.state.chart_options}
+          />
+          <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
+          </Modal>
         </div>
     </div>
     );

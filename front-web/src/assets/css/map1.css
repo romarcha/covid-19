@@ -68,12 +68,38 @@ body {
 .map-overlay-chart {
     position: absolute;
     left: 0;
-    min-height: 40%;
+    bottom: 0;
+    padding: 10px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    width: 40%;
+    max-height: 40%;
     background: rgba(255, 255, 255, 0.8);
     margin-right: 20px;
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
+}
+
+#legend{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    margin-right: 5%;
+    border-radius: 19px;
+    width: 200px !important;
+    height: 50px !important;
+}
+#legend span{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    background: linear-gradient(90deg, rgba(17,6,201,1) 0%, rgba(255,255,255,1) 50%, rgba(228,9,9,1) 100%);
+    margin-right: 5%;
+    width: 200px !important;
+    height: 20px !important;
 }
 
 .map-overlay-select {
@@ -84,17 +110,29 @@ body {
     overflow: auto;
     border-radius: 3px;
 }
+
+.button{
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    width: 30px;
+    margin-left: 5%;
+    margin-top: 1%;
+}
+
+.arrow{
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    width: 20px;
+    margin-right: 5%;
+    margin-top: 5%;
+}
       
 #features {
     top: 0;
     margin-top: 20px;
-}
-#features-chart{
-    bottom: 0;
-    /* height: 100px; */
-    margin-bottom: 20px;
-    margin-left: 10px;
-    width: 40%;
 }
 
 #features-selection {
@@ -120,4 +158,20 @@ body {
     width: 10px;
     height: 10px;
     margin-right: 5px;
+}
+
+/* Cambios sobre la propia tabla */
+.table {
+width: 80%;
+margin: auto;
+}
+/* Espacio de relleno en celdas y cabeceras */
+/* .table td,th{
+padding:5px;
+} */
+/* Modificación de estilos en celdas */
+table td{
+text-align:center;
+border:2px solid #B3B6B7;
+font-size:12px;
 }

@@ -8,6 +8,10 @@ include/
 pip-selfcheck.json
 plots_maps.pdf
 raw_data/
+front-web/node_modules
+front-web/package-lock.json
+backend-web/node_modules
+backend-web/package-lock.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

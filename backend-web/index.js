@@ -17,11 +17,13 @@ const connectionData = {
   }
 
 app.get('/query', function (req, res) {
+    // console.log(req.headers)
     const client = new Client(connectionData)
     client.connect()
     var query = "SELECT * FROM all_results WHERE last_obs_date = '" + req.headers['model_date'] + "' AND lookahead = '"+req.headers['lookahead']+"'";
     client.query(query)
     .then(response => {
+        console.log(response.rows)
         res.send(response.rows);
         client.end()
     })
