@@ -26,6 +26,7 @@ class PredictionDataset:
         self.processed_df = pd.DataFrame()
         self.model_name = model_name
         self.performance_evaluated = False
+        self.n_smoothing = 0
 
     def prediction_for_location(self, location):
         return self.df[self.df['location'] == location]
@@ -77,90 +78,103 @@ class PredictionDataset:
             print("Evaluating performance for "+state[1]+" \t\t Model last obs: "+str(self.last_observation_date))
             aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
             state_df = self.df[self.df['location'] == state[1]]
-            performance_df = pd.DataFrame()
-            performance_df['ev'] = state_df.reindex(aux_gt_df.index)['deaths_mean']
-            performance_df['lb'] = state_df.reindex(aux_gt_df.index)['deaths_lower']
-            performance_df['ub'] = state_df.reindex(aux_gt_df.index)['deaths_upper']
-            
+
             # Only for new york use the data from the new york times
+            gt_cumm = aux_gt_df['cum_deaths_jhu'] + 1
             if state[1] == "New York":
-                performance_df['gt'] = aux_gt_df['delta_deaths_nyt']
-            else:
-                performance_df['gt'] = aux_gt_df['delta_deaths_jhu']
+                gt_cumm = aux_gt_df['cum_deaths_nyt'] + 1
 
-            performance_df['gt_ihme'] = aux_gt_df['delta_deaths_ihme']
-            performance_df['gt_nyt'] = aux_gt_df['delta_deaths_nyt']
+            smooth_range = range(0, self.n_smoothing + 1)
 
-            n_smoothing = 10
-            for smooth_id in range(1, n_smoothing+1):
-                performance_df['gt_cum_jhu_ma'+str(smooth_id)] = aux_gt_df['cum_deaths_jhu_ma' + str(smooth_id)]
-                performance_df['gt_jhu_ma'+str(smooth_id)] = aux_gt_df['delta_deaths_jhu_ma'+str(smooth_id)]
-                performance_df['gt_jhu_delog_ma'+str(smooth_id)] = aux_gt_df['delta_deaths_jhu_delog_ma' + str(smooth_id)]
+            for smooth_id in smooth_range:
+                performance_df = pd.DataFrame()
+                performance_df['ev'] = state_df.reindex(aux_gt_df.index)['deaths_mean']
+                performance_df['lb'] = state_df.reindex(aux_gt_df.index)['deaths_lower']
+                performance_df['ub'] = state_df.reindex(aux_gt_df.index)['deaths_upper']
+                performance_df['smooth_id'] = smooth_id
 
-            # Observed - estimated
-            performance_df['error'] = aux_gt_df['delta_deaths_jhu'] - state_df.reindex(aux_gt_df.index)['deaths_mean']
-            for smooth_id in range(1, n_smoothing + 1):
-                performance_df['error'+str(smooth_id)] = performance_df['gt_jhu_delog_ma'+str(smooth_id)] - state_df.reindex(aux_gt_df.index)['deaths_mean']
-
-            # Fill up all performance values with default value
-            performance_df['PE'] = np.nan
-            performance_df['Adj PE'] = np.nan
-            performance_df['APE'] = np.nan
-
-            for i, row in performance_df.iterrows():
-                if row['ev'] == 0 and row['gt'] == 0:
-                    performance_df.at[i, 'PE'] = 0
-                    performance_df.at[i, 'Adj PE'] = 0
-                elif row['gt'] < 0:
-                    performance_df.at[i, 'PE'] = np.nan
-                    performance_df.at[i, 'Adj PE'] = np.nan
-                elif pd.isna(row['ev']) or pd.isna(row['gt']):
-                    performance_df.at[i, 'PE'] = np.nan
-                    performance_df.at[i, 'Adj PE'] = np.nan
-                elif not row['ev'] == 0 and row['gt'] == 0:
-                    performance_df.at[i, 'PE'] = np.inf
-                    performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
-                elif (row['ev']+row['gt']) == 0:
-                    performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
-                    performance_df.at[i, 'Adj PE'] = np.nan
+                if smooth_id == 0:
+                    gt_cumm = gt_cumm
+                elif smooth_id == 1:
+                    gt_cumm = np.log(gt_cumm.astype(float)).rolling(3, center=True).sum() / 3
                 else:
-                    performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
-                    performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
+                    gt_cumm = gt_cumm.rolling(3, center=True).sum() / 3
 
-            performance_df['APE'] = np.abs(performance_df['PE'])
-            performance_df['Adj APE'] = np.abs(performance_df['Adj PE'])
-            performance_df['LAPE'] = 1 / (1 + np.exp(-performance_df['APE']/100))
-            performance_df['LAdj APE'] = 1 / (1 + np.exp(-performance_df['Adj APE']/100))
+                performance_df['gt_cumm'] = gt_cumm
+                if smooth_id >= 1:
+                    gt_delta = np.exp(gt_cumm).diff()
+                else:
+                    gt_delta = gt_cumm.diff()
+                gt_delta.fillna(0)
+                gt_delta = gt_delta.astype(float).round()
+                performance_df['gt'] = gt_delta
 
-            if (performance_df['LAPE'] > 1).any():
-                raise Exception("LAPE greater than 1")
+                performance_df['gt_ihme'] = aux_gt_df['delta_deaths_ihme']
+                performance_df['gt_nyt'] = aux_gt_df['delta_deaths_nyt']
+                performance_df['gt_jhu'] = aux_gt_df['delta_deaths_jhu']
 
-            performance_df['last_obs_date'] = self.last_observation_date
-            # Check if inside, below or above bounds
-            #performance_df = performance_df.dropna()
+                # Observed - estimated
+                performance_df['error'] = gt_delta - state_df.reindex(aux_gt_df.index)['deaths_mean']
 
-            performance_df['within_PI'] = ""
-            performance_df['outside_by'] = np.nan
-            performance_df['last_obs_date'] = self.last_observation_date
-            performance_df['model_name'] = self.model_name
+                # Fill up all performance values with default value
+                performance_df['PE'] = np.nan
+                performance_df['Adj PE'] = np.nan
+                performance_df['APE'] = np.nan
 
-            performance_df.loc[performance_df['gt'] > performance_df['ub'], 'within_PI'] = "above"
-            performance_df.loc[performance_df['gt'] > performance_df['ub'], 'outside_by'] = performance_df['gt'] - performance_df['ub']
+                for i, row in performance_df.iterrows():
+                    if row['ev'] == 0 and row['gt'] == 0:
+                        performance_df.at[i, 'PE'] = 0
+                        performance_df.at[i, 'Adj PE'] = 0
+                    elif row['gt'] < 0:
+                        performance_df.at[i, 'PE'] = np.nan
+                        performance_df.at[i, 'Adj PE'] = np.nan
+                    elif pd.isna(row['ev']) or pd.isna(row['gt']):
+                        performance_df.at[i, 'PE'] = np.nan
+                        performance_df.at[i, 'Adj PE'] = np.nan
+                    elif not row['ev'] == 0 and row['gt'] == 0:
+                        performance_df.at[i, 'PE'] = np.inf
+                        performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
+                    elif (row['ev']+row['gt']) == 0:
+                        performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
+                        performance_df.at[i, 'Adj PE'] = np.nan
+                    else:
+                        performance_df.at[i, 'PE'] = 100 * row['error'] / row['gt']
+                        performance_df.at[i, 'Adj PE'] = 100 * row['error'] / (row['gt']+row['ev'])
 
-            performance_df.loc[performance_df['gt'] < performance_df['lb'],'within_PI'] = "below"
-            performance_df.loc[performance_df['gt'] < performance_df['lb'], 'outside_by'] = performance_df['gt'] - performance_df['lb']
+                performance_df['APE'] = np.abs(performance_df['PE'])
+                performance_df['Adj APE'] = np.abs(performance_df['Adj PE'])
+                performance_df['LAPE'] = 1 / (1 + np.exp(-performance_df['APE']/100))
+                performance_df['LAdj APE'] = 1 / (1 + np.exp(-performance_df['Adj APE']/100))
 
-            performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']),'within_PI'] = "inside"
-            performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']), 'outside_by'] = 0
+                if (performance_df['LAPE'] > 1).any():
+                    raise Exception("LAPE greater than 1")
 
-            performance_df['state_long'] = state[1]
-            performance_df['state_short'] = state[0]
-            performance_df['lookahead'] = (performance_df.index - self.last_observation_date).days
-            if first:
-                self.processed_df = performance_df
-                first = False
-            else:
-                self.processed_df = self.processed_df.append(performance_df)
+                performance_df['last_obs_date'] = self.last_observation_date
+                # Check if inside, below or above bounds
+                #performance_df = performance_df.dropna()
+
+                performance_df['within_PI'] = ""
+                performance_df['outside_by'] = np.nan
+                performance_df['last_obs_date'] = self.last_observation_date
+                performance_df['model_name'] = self.model_name
+
+                performance_df.loc[performance_df['gt'] > performance_df['ub'], 'within_PI'] = "above"
+                performance_df.loc[performance_df['gt'] > performance_df['ub'], 'outside_by'] = performance_df['gt'] - performance_df['ub']
+
+                performance_df.loc[performance_df['gt'] < performance_df['lb'],'within_PI'] = "below"
+                performance_df.loc[performance_df['gt'] < performance_df['lb'], 'outside_by'] = performance_df['gt'] - performance_df['lb']
+
+                performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']),'within_PI'] = "inside"
+                performance_df.loc[(performance_df['gt'] >= performance_df['lb']) & (performance_df['gt'] <= performance_df['ub']), 'outside_by'] = 0
+
+                performance_df['state_long'] = state[1]
+                performance_df['state_short'] = state[0]
+                performance_df['lookahead'] = (performance_df.index - self.last_observation_date).days
+                if first:
+                    self.processed_df = performance_df
+                    first = False
+                else:
+                    self.processed_df = self.processed_df.append(performance_df)
         self.performance_evaluated = True
 
 #    def plot(self):
@@ -368,6 +382,7 @@ class CovidPredictionEvaluator:
                 # New York Times Data
                 nytimes_df_tmp = nytimes_df[nytimes_df["state"] == state[1]]
                 nytimes_df_tmp = nytimes_df_tmp.drop(columns=['date', 'state'])
+                state_df['cum_deaths_nyt'] = nytimes_df_tmp.reindex(state_df.index)['deaths']
                 nytimes_df_tmp = nytimes_df_tmp.diff()
                 nytimes_df_tmp = nytimes_df_tmp.fillna(0)
                 nytimes_df_tmp = nytimes_df_tmp.rename(columns={"deaths": "delta_deaths"})
@@ -379,18 +394,6 @@ class CovidPredictionEvaluator:
                 jhu_sum_series = jhu_tmp.sum(axis=0).filter(like='/20')
                 jhu_sum_series.index = pd.to_datetime(jhu_sum_series.index, format=jhu_date_format)
                 state_df['cum_deaths_jhu'] = jhu_sum_series
-                n_smoothing = 10
-                for smooth_id in range(1, n_smoothing+1):
-                    if smooth_id == 1:
-                        state_df['cum_deaths_jhu_ma'+str(smooth_id)] = jhu_sum_series.rolling(3, center=True).sum()/3
-                        state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)] = np.log(jhu_sum_series.astype(float)).rolling(3, center=True).sum() / 3
-                    else:
-                        state_df['cum_deaths_jhu_ma' + str(smooth_id)] = state_df['cum_deaths_jhu_ma' + str(smooth_id-1)].rolling(3, center=True).sum() / 3
-                        state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)] = state_df['cum_deaths_jhu_log_ma_' + str(smooth_id-1)].rolling(3, center=True).sum() / 3
-                    state_df['delta_deaths_jhu_ma' + str(smooth_id)] = state_df['cum_deaths_jhu_ma' + str(smooth_id)].diff()
-                    state_df['delta_deaths_jhu_ma' + str(smooth_id)].fillna(0)
-                    state_df['delta_deaths_jhu_delog_ma' + str(smooth_id)] = np.exp(state_df['cum_deaths_jhu_log_ma_' + str(smooth_id)]).diff()
-                    state_df['delta_deaths_jhu_delog_ma' + str(smooth_id)].fillna(0)
                 jhu_sum_series = jhu_sum_series.diff()
                 jhu_sum_series = jhu_sum_series.fillna(0)
                 state_df['delta_deaths_jhu'] = jhu_sum_series
@@ -430,5 +433,5 @@ evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="IHME")
 evaluator.plot_results()
 evaluator.get_all_data_as_csv()
 evaluator.get_state_data_as_csv()
-#evaluator.upload_to_db()
+evaluator.upload_to_db()
 print("Written results to csv")
