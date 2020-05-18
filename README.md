@@ -67,7 +67,10 @@ pip install -r requirements.txt
 | perc_0.990       | double | Percentile of posterior estimate of daily deaths | 
 | gt_source        | string | Source of data used to evaluate the errors (depends on the data that each model uses to train their models.
 | gt_jhu           | integer | Observed daily deaths according to JHU |
-| gt_nyt           | integer | Observed daily deaths according to NYT | 
+| gt_nyt           | integer | Observed daily deaths according to NYT |
+| gt_ecdc          | integer | Observed daily deaths according to ECDC |
+| gt_idph          | integer | Observed daily deaths according to IDPH |
+| gt_usafacts      | integer | Observed daily deaths according to USAFacts |
 | error            | double | Error in prediction (gt - expected_value) |
 | pe               | double | Percentage Error |
 | adj_pe           | double | Adjusted Percentage Error |
@@ -79,25 +82,28 @@ pip install -r requirements.txt
 | outside_95p_by   | double | if inside 0, if outside is the amount by which it is outside of the 95% prediction interval |
 
 ## Data Models
-- [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
-- [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
-- [x] [Imperial](https://github.com/sangeetabhatia03/covid19-short-term-forecasts)
-- [x] [YYG](https://covid19-projections.com/)
-- [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
-- [x] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
-- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
-- [x] [LANL](https://covid-19.bsvgateway.org/)
-- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
-- [x] [Auquan](https://covid19-infection-model.auquan.com/)
+- [ ] [Auquan](https://covid19-infection-model.auquan.com/)
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
+- [x] [CU](https://covidprojections.azurewebsites.net)
+- [x] [CovidActNow](https://covidactnow.org)
+- [x] [ERDC]()
 - [ ] [GA_Tech]()
-- [x] [IowaStateLW]()
-- [x] [JHU_IDD]()
+- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
+- [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
+- [x] [Imperial](https://mrc-ide.github.io/covid19-short-term-forecasts/index.html#ensemble-model)
+- [x] [IowaStateLW](https://covid19.stat.iastate.edu)
+- [x] [JHU](https://github.com/HopkinsIDD/COVIDScenarioPipeline)
+- [x] [LANL](https://covid-19.bsvgateway.org/)
 - [ ] [MIT](https://www.covidanalytics.io/)
-- [ ] [MOBS]()
-- [ ] [UCLA]()
-- [ ] [UChicago]()
-- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)[UMass](https://github.com/dsheldon/covid)
+- [ ] [MOBS](https://covid19.gleamproject.org/)
+- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
+- [ ] [Quantori]
+- [ ] [UCLA](https://covid19.uclaml.org/)
+- [x] [UChicago](https://github.com/cobeylab/covid_IL)
+- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)
+- [ ] [UMass](https://github.com/dsheldon/covid)
+- [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
+- [x] [YYG](https://covid19-projections.com/)
 
 
 ## Useful Links
