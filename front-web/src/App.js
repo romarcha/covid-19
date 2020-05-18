@@ -14,9 +14,10 @@ import expand_icon from './assets/interface.png'
 import minimize_icon from './assets/minimize.png'
 import alternate_icon from './assets/directions.png'
 import back_icon from './assets/arrowback.png'
+import information_icon from './assets/information.png'
 
-const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
-// const ROOT_URL = 'http://localhost:3500'
+// const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
+const ROOT_URL = 'http://localhost:3500'
 mapboxgl.accessToken = 'pk.eyJ1Ijoicm1hcjUyNTgiLCJhIjoiY2s5eHl1Y244MGtpNTNrcXdoZ3oyYjVqeCJ9.fkrVlktDGk0CNJieDExeVg';
 
 var map, map2;
@@ -28,6 +29,7 @@ class App extends Component {
 
     this.state = {
       date: ['2020-03-29'],
+      lastUpdateDate: '',
       lookahead: '1',
       checkedItemsDate: new Map(),
       checkedItemsLookahead: new Map(),
@@ -35,6 +37,7 @@ class App extends Component {
       current_state: {name: '', short_name: '',last_obs_date: '', model_name: ''},
       loading: false,
       showModal: false,
+      showInformationModal: false,
       selected: false,
       switchComparation: false,
       switchComparationLine: false,
@@ -64,6 +67,9 @@ class App extends Component {
               labelFontColor: "#a8a8a8"
             }
           ]
+        },
+        axisY:{
+          title:"Deaths per day",
         },
         legend: {
           horizontalAlign: "right",
@@ -201,6 +207,8 @@ class App extends Component {
     this.update_data_charts = this.update_data_charts.bind(this);
     this.handleOpenModal = this.handleOpenModal.bind(this);
     this.handleCloseModal = this.handleCloseModal.bind(this);
+    this.handleOpenInformationModal = this.handleOpenInformationModal.bind(this);
+    this.handleCloseInformationModal = this.handleCloseInformationModal.bind(this);
     this.handleChangefill = this.handleChangefill.bind(this);
     this.closeComparation = this.closeComparation.bind(this);
     this.handleChangeSwitch = this.handleChangeSwitch.bind(this);
@@ -233,22 +241,26 @@ class App extends Component {
     'layout': {},
     'paint': {
       'fill-color': [
-        'interpolate',
-        ['linear'],
-        ['get', 'PE'],
-        -250,
-         'rgba(17,6,201,1)',
-         0,
-         'white',
-         250,
-         'rgba(228,9,9,1)'
-        ],
-    'fill-opacity': [
-    'case',
-    ['boolean', ['feature-state', 'hover'], false],
-    1,
-    0.8
-    ]
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        '#52c13f',
+        ['interpolate',
+          ['linear'],
+          ['get', 'PE'],
+          -250,
+            'rgba(17,6,201,1)',
+            0,
+            'white',
+            250,
+            'rgba(228,9,9,1)'
+          ],
+        ], 
+      'fill-opacity': [
+      'case',
+      ['boolean', ['feature-state', 'hover'], false],
+      1,
+      0.8
+      ]
     }
     });
     map.addLayer({
@@ -484,8 +496,22 @@ class App extends Component {
   handleCloseModal() {
     this.setState({ showModal: false });
   }
+  handleOpenInformationModal() {
+    this.setState({ showInformationModal: true });
+  }
+  handleCloseInformationModal() {
+    this.setState({ showInformationModal: false });
+  }
 
   async read_database(date,lookahead){
+    let lastUpdateDate = await axios.get(ROOT_URL+'/lastUpdate', {})
+      .then(function async (response) {
+        return response.data 
+      })
+      .catch(function (error) {
+        console.log(error);
+      })
+    this.setState({lastUpdateDate: lastUpdateDate})
     let data = await axios.get(ROOT_URL+'/query', {
       headers: {'model_date': date, 'lookahead': lookahead}
       })
@@ -625,9 +651,12 @@ class App extends Component {
     }
     this.state.chart.subtitles[0].set("text",state_name)
     if(this.state.date.length === 1){
+      let forecastDate = new Date(last_obs_date)
+      forecastDate = forecastDate.getTime() + 1000*60*60*24
+      forecastDate = new Date(forecastDate)
       this.state.chart.set("axisX",{stripLines: [{
         startValue: new Date('2020-01-01'),
-        endValue: new Date(last_obs_date),
+        endValue: forecastDate,
         color: '#b3b3b3',
         lineDashType: 'dash',
         opacity: 0.2
@@ -640,7 +669,8 @@ class App extends Component {
       viewportMaximum: new Date('2020-07-01'),})
     }
     this.state.chart.set("axisY", {
-      viewportMinimum: -5
+      viewportMinimum: -5,
+      title: 'Deaths per day'
     })
     map.setFilter('select-borders',['==',['get', 'name'], state_name])
     map.setPaintProperty('select-borders', 'line-width', 3);
@@ -682,6 +712,9 @@ class App extends Component {
             this.update_data_charts(item,count_models)
           }
         } else {
+          let current_state = this.state.current_state
+          current_state['last_obs_date'] = item
+          this.setState({current_state: current_state})
           let date = [item]
           this.setState({date: date})
           this.setState({checkedItemsDate: new Map()})
@@ -733,31 +766,39 @@ class App extends Component {
     let change = []
     if (this.state.fill === 'PE'){
         change = [
-        'interpolate',
-        ['linear'],
-        ['get', 'outside_by'],
-        -26,
-         'rgba(17,6,201,1)',
-         0,
-         'white',
-         26,
-         'rgba(228,9,9,1)'
-        ]
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          '#52c13f',
+          ['interpolate',
+            ['linear'],
+            ['get', 'outside_by'],
+            -26,
+              'rgba(17,6,201,1)',
+              0,
+              'white',
+              26,
+              'rgba(228,9,9,1)'
+            ],
+          ] 
         map.setFilter('state-fills-undefined',['==',['get', 'outside_by'],''])
         map2.setFilter('state-fills-undefined',['==',['get', 'outside_by'],''])
         this.setState({fill: "Outside"})
     } else {
         change = [
-        'interpolate',
-        ['linear'],
-        ['get', 'PE'],
-        -250,
-        'rgba(17,6,201,1)',
-        0,
-        'white',
-        250,
-        'rgba(228,9,9,1)'
-        ]
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          '#52c13f',
+          ['interpolate',
+            ['linear'],
+            ['get', 'PE'],
+            -250,
+              'rgba(17,6,201,1)',
+              0,
+              'white',
+              250,
+              'rgba(228,9,9,1)'
+            ],
+          ] 
         map.setFilter('state-fills-undefined',['==',['get', 'PE'],''])
         map2.setFilter('state-fills-undefined',['==',['get', 'PE'],''])
         this.setState({fill: "PE"})
@@ -777,6 +818,7 @@ class App extends Component {
         ? <div className="mapContainer">
         <div id='map' style={{width: '100%'}}></div>
         <div id='map2'></div>
+        <div className="model_title"><strong>{'IHME-'+this.state.date[0]}</strong></div>
         <div className='map-overlay-comparative2' id='features2'><h2>Data for State</h2><div id='pd2' className="table"><p>Select a state!</p></div></div>
         {this.state.fill === 'PE'
         ? <div id='legend'>
@@ -817,7 +859,10 @@ class App extends Component {
           <br/><br/>
           </div>
         </div>
-        <div className='map-overlay' id='features'><h2>Data for State</h2><div id='pd' className="table"><p>Select a state!</p></div></div>          
+        <div className='map-overlay' id='features'>
+          <h2>Data for State <img src={information_icon} className="information" onClick={this.handleOpenInformationModal} alt='information'></img></h2>
+          <div id='pd' className="table"><p>Select a state!</p></div>
+        </div>          
         <div className='map-overlay-chart'>
         <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
         <ClipLoader
@@ -829,6 +874,7 @@ class App extends Component {
         <CanvasJSChart options = {this.state.chart_options}
           onRef = {ref => this.setState({chart: ref})}
         />
+        <small className="captionChart">* The continuous line depicts the expected value, while the shaded area represents the 95% prediction intervals provided by the model.</small>
         </div>
         <Modal
         isOpen={this.state.showModal}
@@ -843,6 +889,28 @@ class App extends Component {
         <CanvasJSChart options = {this.state.chart_options}
         />
         <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
+        </Modal>
+        <Modal
+        isOpen={this.state.showInformationModal}
+        style={{
+          content : {
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            right: 'auto',
+            bottom: 'auto',
+            marginRight: '-50%',
+            transform: 'translate(-50%, -50%)',
+            width: '30%',
+          }
+        }}
+        >
+          <div className="showInformation">
+          <h2>Source</h2>
+          <strong>Paper: </strong><a href="https://arxiv.org/abs/2004.04734" >https://arxiv.org/abs/2004.04734</a><br/><br/>
+          <strong>{'Last Update: '+this.state.lastUpdateDate}</strong><br/>
+          <button className="infoButton" onClick={this.handleCloseInformationModal}>Close</button>  
+          </div> 
         </Modal>
       </div>
         //RENDER COMPARATIVE

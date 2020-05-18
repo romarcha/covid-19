@@ -67,7 +67,7 @@ body {
     background: rgba(255, 255, 255, 0.8);
     margin-right: 2%;
     margin-top: 2%;
-
+    padding-bottom: 1%;
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
@@ -121,6 +121,23 @@ body {
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
+    text-align: left;
+}
+
+.captionChart{
+    font-size: 10px;    
+}
+
+.showInformation h2{
+    text-align: center;
+}
+.infoButton{
+    position: relative;
+    left: 50%;
+    width: 15%;
+    margin: 3%;
+    margin-left: -7.5%;
+    
 }
 
 .map-overlay-chart-comparative {
@@ -166,6 +183,16 @@ body {
     margin-left: -100px;
 }
 
+.model_title{
+    margin: auto;
+    margin-top: 2%;
+}
+
+.information{
+    width: 20px;
+    cursor: pointer;
+}
+
 .map-overlay-select {
     position: absolute;
     left: 0;
@@ -182,6 +209,7 @@ body {
     width: 30px;
     margin-left: 5%;
     margin-top: 1%;
+    cursor: pointer;
 }
 
 .back{
