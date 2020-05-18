@@ -36,25 +36,66 @@ body {
     * Create a position for the map
     * on the page */
     #map {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 100%;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        z-index: -2;
+    }
+    #map2 {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        z-index: -3;
+    }
+    .mapLeft {
+        left: 0;
+    }
+    .mapRight {
+        right: 0;
     }
     
-    /**
-    * Set rules for how the map overlays
-    * (information box and legend) will be displayed
-    * on the page. */
+
 .map-overlay {
     position: absolute;
     /* height: 500px !important; */
     width: 20%;
     height: 75%;
-    bottom: 0;
+    top: 0;
     right: 0;
     background: rgba(255, 255, 255, 0.8);
-    margin-right: 20px;
+    margin-right: 2%;
+    margin-top: 2%;
+
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
+.map-overlay-comparative {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 20%;
+    height: 40%;
+    margin-bottom: 2%;
+    margin-left: 2%;
+    background: rgba(255, 255, 255, 0.8);
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
+.map-overlay-comparative2 {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 20%;
+    height: 40%;
+    margin-bottom: 2%;
+    margin-right: 2%;
+    background: rgba(255, 255, 255, 0.8);
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
@@ -67,6 +108,7 @@ body {
 
 .map-overlay-chart {
     position: absolute;
+    z-index: -1;
     left: 0;
     bottom: 0;
     padding: 10px;
@@ -81,11 +123,28 @@ body {
     border-radius: 3px;
 }
 
+.map-overlay-chart-comparative {
+    width: 40%;
+    position: absolute;
+    left: 50%;
+    margin-left: -20% !important;
+    bottom: 0;
+    padding: 10px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    max-height: 40%;
+    background: rgba(255, 255, 255, 0.8);
+    margin-right: 20px;
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
 #legend{
     position: absolute;
     bottom: 0;
     right: 0;
-    z-index: 1;
+    z-index: 0;
     margin-right: 5%;
     border-radius: 19px;
     width: 200px !important;
@@ -100,6 +159,11 @@ body {
     margin-right: 5%;
     width: 200px !important;
     height: 20px !important;
+}
+.legend-comparative{
+    top: 40%;
+    left: 50%;
+    margin-left: -100px;
 }
 
 .map-overlay-select {
@@ -120,6 +184,15 @@ body {
     margin-top: 1%;
 }
 
+.back{
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    width: 30px;
+    margin-left: 5%;
+    margin-top: 1%;
+}
+
 .arrow{
     position: absolute;
     z-index: 1;
@@ -130,10 +203,10 @@ body {
     margin-top: 5%;
 }
       
-#features {
+/* #features {
     top: 0;
     margin-top: 20px;
-}
+} */
 
 #features-selection {
     top: 0;

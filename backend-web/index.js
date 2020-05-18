@@ -17,7 +17,6 @@ const connectionData = {
   }
 
 app.get('/query', function (req, res) {
-    // console.log(req.headers)
     const client = new Client(connectionData)
     client.connect()
     var query = "SELECT * FROM all_results WHERE last_obs_date = '" + req.headers['model_date'] + "' AND lookahead = '"+req.headers['lookahead']+"'";
@@ -34,7 +33,6 @@ app.get('/query', function (req, res) {
 });
 
 app.get('/timeLines', function (req, res) {
-
     const client = new Client(connectionData)
     client.connect()
     var query = "SELECT date,gt,ev,lb,ub,state_short FROM all_results WHERE last_obs_date = '" + req.headers['model_date'] + "'";
