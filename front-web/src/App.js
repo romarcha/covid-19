@@ -5,6 +5,7 @@ import './assets/css/map1.css';
 import mapboxgl from 'mapbox-gl';
 import Checkbox from './components/checkbox'
 import checkboxes from './data/checkboxes'
+import styles from './data/styles'
 import Switch from "react-switch";
 import geometry from './data/geometry'
 import CanvasJSReact from './assets/canvas/canvasjs.react'
@@ -16,8 +17,8 @@ import alternate_icon from './assets/directions.png'
 import back_icon from './assets/arrowback.png'
 import information_icon from './assets/information.png'
 
-// const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
-const ROOT_URL = 'http://localhost:3500'
+const ROOT_URL = 'http://ec2-13-55-123-77.ap-southeast-2.compute.amazonaws.com:3500'
+// const ROOT_URL = 'http://localhost:3500'
 mapboxgl.accessToken = 'pk.eyJ1Ijoicm1hcjUyNTgiLCJhIjoiY2s5eHl1Y244MGtpNTNrcXdoZ3oyYjVqeCJ9.fkrVlktDGk0CNJieDExeVg';
 
 var map, map2;
@@ -44,161 +45,9 @@ class App extends Component {
       comparation: false,
       fill: "PE",
       chart: {},
-      chart_options: {
-        height: window.screen.height*0.35,
-        theme: "light1",
-        animationEnabled: true,
-        exportEnabled: true,
-        zoomEnabled: true,
-        title: {
-          text: "Deaths per Day",
-          fontColor: 'black',
-          fontWeight: 'bold',
-          padding: 10
-        },
-        subtitles: [{
-          text: ""
-        }],
-        axisX:{
-          stripLines:[
-            {             
-              color:"#d8d8d8",
-              label : "Label 1",
-              labelFontColor: "#a8a8a8"
-            }
-          ]
-        },
-        axisY:{
-          title:"Deaths per day",
-        },
-        legend: {
-          horizontalAlign: "right",
-          verticalAlign: "top"
-        },
-        scaleBreaks: {
-					autoCalculate: true
-				},
-        data: [
-        {
-          type: "line",
-          lineDashType: "dash",
-          color: '#1a1a1a',
-          lineThickness: 1,
-          showInLegend: true, 
-          name: "series1",
-          legendText: "OBSERVED",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "line",
-          color: '#006699',
-          lineThickness: 3,
-          showInLegend: true, 
-          name: "series2",
-          legendText: "EXPECTED VALUE",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "rangeSplineArea",
-          color: '#0066cc',
-          fillOpacity: 0.4,
-          lineThickness: 0,
-          showInLegend: true, 
-          name: "series3",
-          legendText: "PREDICTION INTERVAL",
-          toolTipContent: "{x}<br><b>UB:</b> {y[1]}<br><b>LB:</b> {y[0]}",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "line",
-          color: '#1a1a1a',
-          lineThickness: 1,
-          dataPoints: [
-          ]
-        },
-        //Comparative Model
-        //Second Model
-        {
-          type: "line",
-          color: '#EF1212',
-          lineThickness: 3,
-          showInLegend: true, 
-          name: "series5",
-          legendText: "EXPECTED VALUE",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "rangeSplineArea",
-          color: '#EF1212',
-          fillOpacity: 0.4,
-          lineThickness: 0,
-          showInLegend: true, 
-          name: "series6",
-          legendText: "PREDICTION INTERVAL",
-          toolTipContent: "{x}<br><b>UB:</b> {y[1]}<br><b>LB:</b> {y[0]}",
-          dataPoints: [
-          ]
-        },
-        //Third Model
-        {
-          type: "line",
-          color: '#036B0B',
-          lineThickness: 3,
-          showInLegend: true, 
-          name: "series7",
-          legendText: "EXPECTED VALUE",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "rangeSplineArea",
-          color: '#036B0B',
-          fillOpacity: 0.4,
-          lineThickness: 0,
-          name: "series8",
-          toolTipContent: "{x}<br><b>UB:</b> {y[1]}<br><b>LB:</b> {y[0]}",
-          dataPoints: [
-          ]
-        },
-        //Fourth model
-        {
-          type: "line",
-          color: '#FFFF23',
-          lineThickness: 3,
-          showInLegend: true, 
-          name: "series9",
-          legendText: "EXPECTED VALUE",
-          dataPoints: [
-          ]
-        },
-        {
-          type: "rangeSplineArea",
-          color: '##FFFF23',
-          fillOpacity: 0.4,
-          lineThickness: 0, 
-          name: "series10",
-          toolTipContent: "{x}<br><b>UB:</b> {y[1]}<br><b>LB:</b> {y[0]}",
-          dataPoints: [
-          ]
-        },
-        ]
-      },
-      customStyles: {
-        content : {
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          right: 'auto',
-          bottom: 'auto',
-          marginRight: '-50%',
-          transform: 'translate(-50%, -50%)',
-          width: '50%',
-        }
-      }       
+      chart_options: styles.chart_options,
+      customStyles: styles.customStyles,
+      customStylesExpand: styles.customStylesExpand      
     };
     this.handleChange = this.handleChange.bind(this);
     this.handleChangeLookahead = this.handleChangeLookahead.bind(this);
@@ -216,10 +65,10 @@ class App extends Component {
 
   async componentDidMount() {
     map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/rmar5258/cka410a630xu21jpf514iqyfc',
-    center: [-100.486052, 37.830348],
-    zoom: 3
+      container: 'map',
+      style: 'mapbox://styles/rmar5258/cka410a630xu21jpf514iqyfc',
+      center: [-100.486052, 37.830348],
+      zoom: 3
     });
     map2 = new mapboxgl.Map({
       container: 'map2',
@@ -234,94 +83,40 @@ class App extends Component {
     'type': 'geojson',
     'data': {"type": "FeatureCollection", "features":[{}]}});
 
-    map.addLayer({
-    'id': 'state-fills',
-    'type': 'fill',
-    'source': 'states',
-    'layout': {},
-    'paint': {
-      'fill-color': [
-        'case',
-        ['boolean', ['feature-state', 'hover'], false],
-        '#52c13f',
-        ['interpolate',
-          ['linear'],
-          ['get', 'PE'],
-          -250,
-            'rgba(17,6,201,1)',
-            0,
-            'white',
-            250,
-            'rgba(228,9,9,1)'
-          ],
-        ], 
-      'fill-opacity': [
-      'case',
-      ['boolean', ['feature-state', 'hover'], false],
-      1,
-      0.8
-      ]
-    }
-    });
-    map.addLayer({
-      'id': 'state-fills-undefined',
-      'type': 'fill',
-      'source': 'states',
-      'layout': {},
-      'filter': ['==','PE',''],
-      'paint': {
-        'fill-color': '#767676',
-        'fill-opacity': 0.8
-      }
-    });
+    map.addLayer(styles.layerStateFills);
+    map.addLayer(styles.layerStateFillsUndefined);
     map.moveLayer('state-fills', 'state-label');
     map.moveLayer('state-fills-undefined', 'state-label');
-    map.addLayer({
-      'id': 'state-borders',
-      'type': 'line',
-      'source': 'states',
-      'layout': {},
-      'paint': {
-      'line-color': '#B3B6B7',
-      'line-width': 1
-      }
-    });
-    map.addLayer({
-      'id': 'select-borders',
-      'type': 'line',
-      'source': 'states',
-      'layout': {},
-      'paint': {
-      'line-color': '#B3B6B7',
-      'line-width': 1
-      }
-    });
+    map.addLayer(styles.layerStateBorders);
+    map.addLayer(styles.layerSelectBorders);
+
     map.on('mousemove', 'state-fills', function(e) {
-    if (e.features.length > 0) {
-    if (hoveredStateId) {
-    map.setFeatureState(
-    { source: 'states', id: hoveredStateId },
-    { hover: false }
-    );
-    }
-    hoveredStateId = e.features[0].id;
-    map.setFeatureState(
-    { source: 'states', id: hoveredStateId },
-    { hover: true }
-    );
-    }
+      if (e.features.length > 0) {
+        if (hoveredStateId) {
+          map.setFeatureState(
+            { source: 'states', id: hoveredStateId },
+            { hover: false }
+          );
+        }
+        hoveredStateId = e.features[0].id;
+        map.setFeatureState(
+          { source: 'states', id: hoveredStateId },
+          { hover: true }
+        );
+      }
     });
 
     map.on('mouseleave', 'state-fills', function() {
-    if (hoveredStateId) {
-    map.setFeatureState(
-    { source: 'states', id: hoveredStateId },
-    { hover: false }
-    );
-    }
-    hoveredStateId = null;
+      if (hoveredStateId) {
+        map.setFeatureState(
+          { source: 'states', id: hoveredStateId },
+          { hover: false }
+        );
+      }
+      hoveredStateId = null;
     });
     });
+
     map.on('click', (e) => {
       var states = map.queryRenderedFeatures(e.point, {
         layers: ['state-fills']
@@ -331,169 +126,124 @@ class App extends Component {
           filter: ['==', 'name', states[0].properties.name]
         });
       }
-      
       if (states.length > 0) {
-          if (states[0].properties.date !== undefined && !this.state.loading){
-            document.getElementById('features').style.display = 'block';
-            document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
+        if (states[0].properties.date !== undefined && !this.state.loading){
+          document.getElementById('features').style.display = 'block';
+          document.getElementById('pd').innerHTML = '<h3><strong>' + states[0].properties.name + '</strong></h3>'+
+          '<table><tr><th></th><th></th></tr>'+
+          '<tr><td>Date</td><td>' + states[0].properties.date.split('T')[0] + '</td></tr>'+
+          '<tr><td>Expected Value</td><td>' + parseFloat(states[0].properties.ev).toFixed(2) + '</td></tr>'+
+          '<tr><td>Lower Bound</td><td>' + parseFloat(states[0].properties.lb).toFixed(2) + '</td></tr>'+
+          '<tr><td>Upper Bound</td><td>' + parseFloat(states[0].properties.ub).toFixed(2) + '</td></tr>'+
+          '<tr><td>Ground Truth</td><td>' + parseFloat(states[0].properties.gt).toFixed(2) + '</td></tr>'+
+          '<tr><td>Error</td><td>' + parseFloat(states[0].properties.error).toFixed(2) + '</td></tr>'+
+          '<tr><td>Percentage Error</td><td>' + parseFloat(states[0].properties.PE).toFixed(2) + '</td></tr>'+
+          '<tr><td>Adjusted PE</td><td>' + parseFloat(states[0].properties['Adj PE']).toFixed(2) + '</td></tr>'+
+          '<tr><td>Absolute PE</td><td>' + parseFloat(states[0].properties.APE).toFixed(2) + '</td></tr>'+
+          '<tr><td>Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['Adj APE']).toFixed(2) + '</td></tr>'+
+          '<tr><td>Logistic Absolute PE</td><td>' + parseFloat(states[0].properties.LAPE).toFixed(2) + '</td></tr>'+
+          '<tr><td>Logistic Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['LAdj APE']).toFixed(2) + '</td></tr>'+
+          '<tr><td>Last Observation Date</td><td>' + states[0].properties.last_obs_date.split('T')[0] + '</td></tr>'+
+          '<tr><td>Within Intervale Prediction</td><td>' + states[0].properties.within_PI + '</td></tr>'+
+          '<tr><td>Outside by</td><td>' + states[0].properties.outside_by + '</td></tr>'+
+          '<tr><td>Model Name</td><td>' + states[0].properties.model_name + '</td></tr>'+
+          '<tr><td>Lookahead</td><td>' + states[0].properties.lookahead + '</td></tr>'+
+          '</table>'
+          if(this.state.date.length === 2 && !this.state.switchComparationLine){              
+            document.getElementById('features2').style.display = 'block';
+            document.getElementById('pd2').innerHTML = '<h3><strong>' + states2[0].properties.name + '</strong></h3>'+
             '<table><tr><th></th><th></th></tr>'+
-            '<tr><td>Date</td><td>' + states[0].properties.date.split('T')[0] + '</td></tr>'+
-            '<tr><td>Expected Value</td><td>' + parseFloat(states[0].properties.ev).toFixed(2) + '</td></tr>'+
-            '<tr><td>Lower Bound</td><td>' + parseFloat(states[0].properties.lb).toFixed(2) + '</td></tr>'+
-            '<tr><td>Upper Bound</td><td>' + parseFloat(states[0].properties.ub).toFixed(2) + '</td></tr>'+
-            '<tr><td>Ground Truth</td><td>' + parseFloat(states[0].properties.gt).toFixed(2) + '</td></tr>'+
-            '<tr><td>Error</td><td>' + parseFloat(states[0].properties.error).toFixed(2) + '</td></tr>'+
-            '<tr><td>Percentage Error</td><td>' + parseFloat(states[0].properties.PE).toFixed(2) + '</td></tr>'+
-            '<tr><td>Adjusted PE</td><td>' + parseFloat(states[0].properties['Adj PE']).toFixed(2) + '</td></tr>'+
-            '<tr><td>Absolute PE</td><td>' + parseFloat(states[0].properties.APE).toFixed(2) + '</td></tr>'+
-            '<tr><td>Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['Adj APE']).toFixed(2) + '</td></tr>'+
-            '<tr><td>Logistic Absolute PE</td><td>' + parseFloat(states[0].properties.LAPE).toFixed(2) + '</td></tr>'+
-            '<tr><td>Logistic Adjusted Absolute PE</td><td>' + parseFloat(states[0].properties['LAdj APE']).toFixed(2) + '</td></tr>'+
-            '<tr><td>Last Observation Date</td><td>' + states[0].properties.last_obs_date.split('T')[0] + '</td></tr>'+
-            '<tr><td>Within Intervale Prediction</td><td>' + states[0].properties.within_PI + '</td></tr>'+
-            '<tr><td>Outside by</td><td>' + states[0].properties.outside_by + '</td></tr>'+
-            '<tr><td>Model Name</td><td>' + states[0].properties.model_name + '</td></tr>'+
-            '<tr><td>Lookahead</td><td>' + states[0].properties.lookahead + '</td></tr>'+
+            '<tr><td>Date</td><td>' + states2[0].properties.date.split('T')[0] + '</td></tr>'+
+            '<tr><td>Expected Value</td><td>' + parseFloat(states2[0].properties.ev).toFixed(2) + '</td></tr>'+
+            '<tr><td>Lower Bound</td><td>' + parseFloat(states2[0].properties.lb).toFixed(2) + '</td></tr>'+
+            '<tr><td>Upper Bound</td><td>' + parseFloat(states2[0].properties.ub).toFixed(2) + '</td></tr>'+
+            '<tr><td>Ground Truth</td><td>' + parseFloat(states2[0].properties.gt).toFixed(2) + '</td></tr>'+
+            '<tr><td>Error</td><td>' + parseFloat(states2[0].properties.error).toFixed(2) + '</td></tr>'+
+            '<tr><td>Percentage Error</td><td>' + parseFloat(states2[0].properties.PE).toFixed(2) + '</td></tr>'+
+            '<tr><td>Adjusted PE</td><td>' + parseFloat(states2[0].properties['Adj PE']).toFixed(2) + '</td></tr>'+
+            '<tr><td>Absolute PE</td><td>' + parseFloat(states2[0].properties.APE).toFixed(2) + '</td></tr>'+
+            '<tr><td>Adjusted Absolute PE</td><td>' + parseFloat(states2[0].properties['Adj APE']).toFixed(2) + '</td></tr>'+
+            '<tr><td>Logistic Absolute PE</td><td>' + parseFloat(states2[0].properties.LAPE).toFixed(2) + '</td></tr>'+
+            '<tr><td>Logistic Adjusted Absolute PE</td><td>' + parseFloat(states2[0].properties['LAdj APE']).toFixed(2) + '</td></tr>'+
+            '<tr><td>Last Observation Date</td><td>' + states2[0].properties.last_obs_date.split('T')[0] + '</td></tr>'+
+            '<tr><td>Within Intervale Prediction</td><td>' + states2[0].properties.within_PI + '</td></tr>'+
+            '<tr><td>Outside by</td><td>' + states2[0].properties.outside_by + '</td></tr>'+
+            '<tr><td>Model Name</td><td>' + states2[0].properties.model_name + '</td></tr>'+
+            '<tr><td>Lookahead</td><td>' + states2[0].properties.lookahead + '</td></tr>'+
             '</table>'
-            if(this.state.date.length === 2 && !this.state.switchComparationLine){              
-              document.getElementById('features2').style.display = 'block';
-              document.getElementById('pd2').innerHTML = '<h3><strong>' + states2[0].properties.name + '</strong></h3>'+
-              '<table><tr><th></th><th></th></tr>'+
-              '<tr><td>Date</td><td>' + states2[0].properties.date.split('T')[0] + '</td></tr>'+
-              '<tr><td>Expected Value</td><td>' + parseFloat(states2[0].properties.ev).toFixed(2) + '</td></tr>'+
-              '<tr><td>Lower Bound</td><td>' + parseFloat(states2[0].properties.lb).toFixed(2) + '</td></tr>'+
-              '<tr><td>Upper Bound</td><td>' + parseFloat(states2[0].properties.ub).toFixed(2) + '</td></tr>'+
-              '<tr><td>Ground Truth</td><td>' + parseFloat(states2[0].properties.gt).toFixed(2) + '</td></tr>'+
-              '<tr><td>Error</td><td>' + parseFloat(states2[0].properties.error).toFixed(2) + '</td></tr>'+
-              '<tr><td>Percentage Error</td><td>' + parseFloat(states2[0].properties.PE).toFixed(2) + '</td></tr>'+
-              '<tr><td>Adjusted PE</td><td>' + parseFloat(states2[0].properties['Adj PE']).toFixed(2) + '</td></tr>'+
-              '<tr><td>Absolute PE</td><td>' + parseFloat(states2[0].properties.APE).toFixed(2) + '</td></tr>'+
-              '<tr><td>Adjusted Absolute PE</td><td>' + parseFloat(states2[0].properties['Adj APE']).toFixed(2) + '</td></tr>'+
-              '<tr><td>Logistic Absolute PE</td><td>' + parseFloat(states2[0].properties.LAPE).toFixed(2) + '</td></tr>'+
-              '<tr><td>Logistic Adjusted Absolute PE</td><td>' + parseFloat(states2[0].properties['LAdj APE']).toFixed(2) + '</td></tr>'+
-              '<tr><td>Last Observation Date</td><td>' + states2[0].properties.last_obs_date.split('T')[0] + '</td></tr>'+
-              '<tr><td>Within Intervale Prediction</td><td>' + states2[0].properties.within_PI + '</td></tr>'+
-              '<tr><td>Outside by</td><td>' + states2[0].properties.outside_by + '</td></tr>'+
-              '<tr><td>Model Name</td><td>' + states2[0].properties.model_name + '</td></tr>'+
-              '<tr><td>Lookahead</td><td>' + states2[0].properties.lookahead + '</td></tr>'+
-              '</table>'
-            }
-            let current_state = {name: states[0].properties.name, short_name: states[0].properties.short_name,model_name: states[0].properties.model_name,last_obs_date: states[0].properties.last_obs_date}
-            this.setState({current_state: current_state})
-            this.build_charts(states[0].properties.model_name,states[0].properties.name,states[0].properties.short_name,states[0].properties.last_obs_date)
-          } else {
-            document.getElementById('features').style.display = 'none';
-            document.getElementById('features2').style.display = 'none';
-            map.setFilter('select-borders',['==',['get', 'name'], false])
-          }               
+          }
+          let current_state = {name: states[0].properties.name, short_name: states[0].properties.short_name,model_name: states[0].properties.model_name,last_obs_date: states[0].properties.last_obs_date}
+          this.setState({current_state: current_state})
+          this.build_charts(states[0].properties.model_name,states[0].properties.name,states[0].properties.short_name,states[0].properties.last_obs_date)
+        } else {
+          document.getElementById('features').style.display = 'none';
+          document.getElementById('features2').style.display = 'none';
+          map.setFilter('select-borders',['==',['get', 'name'], false])
+        }               
       } else {
         document.getElementById('features').style.display = 'none';
         document.getElementById('features2').style.display = 'none';
         map.setFilter('select-borders',['==',['get', 'name'], false])
       }
-      });
+    });
 
     map2.on('load', function() {
       map2.addSource('states', {
       'type': 'geojson',
       'data': {"type": "FeatureCollection", "features":[{}]}});
       
-      map2.addLayer({
-      'id': 'state-fills',
-      'type': 'fill',
-      'source': 'states',
-      'layout': {},
-      'paint': {
-        'fill-color': [
-          'interpolate',
-          ['linear'],
-          ['get', 'PE'],
-          -250,
-           'rgba(17,6,201,1)',
-           0,
-           'white',
-           250,
-           'rgba(228,9,9,1)'
-          ],
-      'fill-opacity': [
-      'case',
-      ['boolean', ['feature-state', 'hover'], false],
-      1,
-      0.8
-      ]
-      }
-      });
-      map2.addLayer({
-        'id': 'state-fills-undefined',
-        'type': 'fill',
-        'source': 'states',
-        'layout': {},
-        'filter': ['==','PE',''],
-        'paint': {
-          'fill-color': '#767676',
-          'fill-opacity': 0.8
-        }
-      });
+      map2.addLayer(styles.layerStateFillsMap2);
+      map2.addLayer(styles.layerStateFillsUndefinedMap2);
       map2.moveLayer('state-fills', 'state-label');
       map2.moveLayer('state-fills-undefined', 'state-label');
-      map2.addLayer({
-        'id': 'state-borders',
-        'type': 'line',
-        'source': 'states',
-        'layout': {},
-        'paint': {
-        'line-color': '#B3B6B7',
-        'line-width': 1
-        }
-      });
-      map2.addLayer({
-        'id': 'select-borders',
-        'type': 'line',
-        'source': 'states',
-        'layout': {},
-        'paint': {
-        'line-color': '#B3B6B7',
-        'line-width': 1
-        }
-      });
+      map2.addLayer(styles.layerStateBordersMap2);
+      map2.addLayer(styles.layerSelectBordersMap2);
+
       map2.on('mousemove', 'state-fills', function(e) {
-      if (e.features.length > 0) {
-      if (hoveredStateId) {
-      map2.setFeatureState(
-      { source: 'states', id: hoveredStateId },
-      { hover: false }
-      );
-      }
-      hoveredStateId = e.features[0].id;
-      map2.setFeatureState(
-      { source: 'states', id: hoveredStateId },
-      { hover: true }
-      );
-      }
+        if (e.features.length > 0) {
+          if (hoveredStateId) {
+            map2.setFeatureState(
+              { source: 'states', id: hoveredStateId },
+              { hover: false }
+            );
+          }
+          hoveredStateId = e.features[0].id;
+          map2.setFeatureState(
+            { source: 'states', id: hoveredStateId },
+            { hover: true }
+          );
+        }
       });
   
       map2.on('mouseleave', 'state-fills', function() {
-      if (hoveredStateId) {
-      map2.setFeatureState(
-      { source: 'states', id: hoveredStateId },
-      { hover: false }
-      );
-      }
-      hoveredStateId = null;
+        if (hoveredStateId) {
+          map2.setFeatureState(
+            { source: 'states', id: hoveredStateId },
+            { hover: false }
+          );
+        }
+        hoveredStateId = null;
       });
-      });
-      this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(this.state.date[0], true) }));
-      this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(this.state.lookahead, true) }));
-      this.update_data_charts(this.state.date[0],0)
-      Modal.setAppElement('body');
-      document.getElementById('features').style.display = 'none';
-      document.getElementById('features2').style.display = 'none';
+    });
+
+    this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(this.state.date[0], true) }));
+    this.setState(prevState => ({ checkedItemsLookahead: prevState.checkedItemsLookahead.set(this.state.lookahead, true) }));
+    this.update_data_charts(this.state.date[0],0)
+    Modal.setAppElement('body');
+    document.getElementById('features').style.display = 'none';
+    document.getElementById('features2').style.display = 'none';
   }
 
   handleOpenModal() {
+    let chart_options = this.state.chart_options
+    chart_options['height'] = window.screen.height*0.75
+    this.setState({chart_options: chart_options})
     this.setState({ showModal: true });
   }
   handleCloseModal() {
+    let chart_options = this.state.chart_options
+    chart_options['height'] = window.screen.height*0.35
+    this.setState({chart_options: chart_options})
     this.setState({ showModal: false });
   }
   handleOpenInformationModal() {
@@ -585,7 +335,7 @@ class App extends Component {
       })
       .catch(function (error) {
         console.log(error);
-    })
+      })
     if (idMap === 0){
       let geoData = await this.read_database(this.state.date[0],this.state.lookahead)
       this.create_geojson(geoData,1)
@@ -597,7 +347,6 @@ class App extends Component {
           this.build_charts(this.state.current_state.model_name,this.state.current_state.name,this.state.current_state.short_name,this.state.current_state.last_obs_date)
         }
       })
-      this.setState({loading: false})
     } else {
       let new_comparative_data = this.state.statesLinesData
       new_comparative_data.push([data.data,date])
@@ -606,7 +355,6 @@ class App extends Component {
           this.build_charts(this.state.current_state.model_name,this.state.current_state.name,this.state.current_state.short_name,this.state.current_state.last_obs_date)
         }
       })
-      this.setState({loading: false})
     }
   }
 
@@ -674,11 +422,15 @@ class App extends Component {
     })
     map.setFilter('select-borders',['==',['get', 'name'], state_name])
     map.setPaintProperty('select-borders', 'line-width', 3);
+    map.setPaintProperty('select-borders', 'line-color', '#52c13f');
     map2.setFilter('select-borders',['==',['get', 'name'], state_name])
     map2.setPaintProperty('select-borders', 'line-width', 3);
+    map2.setPaintProperty('select-borders', 'line-color', '#52c13f');
+    if (this.state.statesLinesData.length === this.state.date.length){
+      this.setState({loading: false})
+    }    
   }
 
-  
   renderChart(){
     document.getElementById('chart-comparative').style.display = 'block';
     document.getElementById('legend').style.display = 'block';
@@ -702,16 +454,14 @@ class App extends Component {
         this.create_geojson(geoData,1)
         this.update_data_charts(item,2)
       } else {
-        if(this.state.switchComparationLine){
-          if (this.state.date.length < 4){
-            let count_models = this.state.date.length + 1;
-            let date = this.state.date
-            date.push(item)
-            this.setState({date: date})
-            this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(item, isChecked) }));
-            this.update_data_charts(item,count_models)
-          }
-        } else {
+        if(this.state.switchComparationLine && this.state.date.length < 4){
+          let count_models = this.state.date.length + 1;
+          let date = this.state.date
+          date.push(item)
+          this.setState({date: date})
+          this.setState(prevState => ({ checkedItemsDate: prevState.checkedItemsDate.set(item, isChecked) }));
+          this.update_data_charts(item,count_models)          
+        } else if (!this.state.switchComparationLine) {
           let current_state = this.state.current_state
           current_state['last_obs_date'] = item
           this.setState({current_state: current_state})
@@ -737,12 +487,13 @@ class App extends Component {
         }  
         this.setState({statesLinesData: statesLinesData}, function(){
           if (this.state.current_state.name !== ''){
-          this.build_charts(this.state.current_state.model_name,this.state.current_state.name,this.state.current_state.short_name,this.state.current_state.last_obs_date)
-        }
+            this.build_charts(this.state.current_state.model_name,this.state.current_state.name,this.state.current_state.short_name,this.state.current_state.last_obs_date)
+          }
         })
       }
     }   
   }
+
   async handleChangeLookahead(e) {
     this.setState({lookahead: e.target.value})
     let geoData = await this.read_database(this.state.date[0],e.target.value)
@@ -765,40 +516,12 @@ class App extends Component {
   handleChangefill(){
     let change = []
     if (this.state.fill === 'PE'){
-        change = [
-          'case',
-          ['boolean', ['feature-state', 'hover'], false],
-          '#52c13f',
-          ['interpolate',
-            ['linear'],
-            ['get', 'outside_by'],
-            -26,
-              'rgba(17,6,201,1)',
-              0,
-              'white',
-              26,
-              'rgba(228,9,9,1)'
-            ],
-          ] 
+        change = styles.changeFillPE 
         map.setFilter('state-fills-undefined',['==',['get', 'outside_by'],''])
         map2.setFilter('state-fills-undefined',['==',['get', 'outside_by'],''])
         this.setState({fill: "Outside"})
     } else {
-        change = [
-          'case',
-          ['boolean', ['feature-state', 'hover'], false],
-          '#52c13f',
-          ['interpolate',
-            ['linear'],
-            ['get', 'PE'],
-            -250,
-              'rgba(17,6,201,1)',
-              0,
-              'white',
-              250,
-              'rgba(228,9,9,1)'
-            ],
-          ] 
+        change = styles.changeFillOutside 
         map.setFilter('state-fills-undefined',['==',['get', 'PE'],''])
         map2.setFilter('state-fills-undefined',['==',['get', 'PE'],''])
         this.setState({fill: "PE"})
@@ -815,157 +538,150 @@ class App extends Component {
     return (
       <div className="App">
         {!this.state.comparation
-        ? <div className="mapContainer">
-        <div id='map' style={{width: '100%'}}></div>
-        <div id='map2'></div>
-        <div className="model_title"><strong>{'IHME-'+this.state.date[0]}</strong></div>
-        <div className='map-overlay-comparative2' id='features2'><h2>Data for State</h2><div id='pd2' className="table"><p>Select a state!</p></div></div>
-        {this.state.fill === 'PE'
-        ? <div id='legend'>
-            <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
-            <span></span>
-            <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
-            <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
-            <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
-          </div>
-        : <div id='legend'>
-            <strong>Number of Deaths Outside PI</strong>
-            <span></span><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
-            <h3 style={{position: 'absolute', left: 0, marginTop: '25px'}}>-26</h3>
-            <h3 style={{position: 'absolute', left: 96, marginTop: '25px'}}>0</h3>
-            <h3 style={{position: 'absolute', right: 0, marginTop: '25px'}}>26</h3>
-          </div>
-        }
-        <div className='map-overlay-chart-comparative' id='chart-comparative'></div>
-        <div className='map-overlay-select' id='features-selection'><h2>Select Model</h2>
-          <div id='selection'>
-          {
-            checkboxes[0].map(item => (
-              <label key={item.key}>
-                {item.name}
-                <Checkbox name={item.name} checked={this.state.checkedItemsDate.get(item.name)} onChange={this.handleChange} />
+          ? 
+          <div className="mapContainer">
+            <div id='map' style={{width: '100%'}}></div>
+            <div id='map2'></div>
+            <div className="model_title"><strong>{'IHME-'+this.state.date[0]}</strong></div>
+            <div className='map-overlay-comparative2' id='features2'><h2>Data for State</h2><div id='pd2' className="table"><p>Select a state!</p></div></div>
+            {this.state.fill === 'PE'
+              ? 
+                <div id='legend'>
+                  <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+                  <span></span>
+                  <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
+                  <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
+                  <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
+                </div>
+              : <div id='legend'>
+                  <strong>Number of Deaths Outside PI</strong>
+                  <span></span><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+                  <h3 style={{position: 'absolute', left: 0, marginTop: '25px'}}>-26</h3>
+                  <h3 style={{position: 'absolute', left: 96, marginTop: '25px'}}>0</h3>
+                  <h3 style={{position: 'absolute', right: 0, marginTop: '25px'}}>26</h3>
+                </div>
+            }
+            <div className='map-overlay-chart-comparative' id='chart-comparative'></div>
+            <div className='map-overlay-select' id='features-selection'><h2>Select Model</h2>
+              <div id='selection'>
+                {
+                  checkboxes[0].map(item => (
+                    <label key={item.key}>
+                      {item.name}
+                      <Checkbox name={item.name} checked={this.state.checkedItemsDate.get(item.name)} onChange={this.handleChange} />
+                      <br/>
+                    </label>
+                  ))
+                }
                 <br/>
-              </label>
-            ))
-          }
-          <br/>
-          <label>
-            <span>Compare Models</span><br/>
-            <Switch onChange={this.handleChangeSwitch} width={40} height={20} onColor="#1106c9" checked={this.state.switchComparationLine} />
-          </label>
-          <h2>Select Lookahead</h2>
-          <input type="range" onChange={this.handleChangeLookahead} min="1" max="7" value={this.state.lookahead}></input>
-          <br/><label>{this.state.lookahead}</label>
-          <br/><br/>
+                <label>
+                  <span>Compare Models</span><br/>
+                  <Switch onChange={this.handleChangeSwitch} width={40} height={20} onColor="#1106c9" checked={this.state.switchComparationLine} />
+                </label>
+                <h2>Select Lookahead</h2>
+                <input type="range" onChange={this.handleChangeLookahead} min="1" max="7" value={this.state.lookahead}></input>
+                <br/><label>{this.state.lookahead}</label>
+                <br/><br/>
+              </div>
+            </div>
+            <div className='map-overlay' id='features'>
+              <h2>Data for State <img src={information_icon} className="information" onClick={this.handleOpenInformationModal} alt='information'></img></h2>
+              <div id='pd' className="table"><p>Select a state!</p></div>
+            </div>          
+            <div className='map-overlay-chart'>
+              <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
+              <ClipLoader
+                css={'position: absolute;z-index: 1; width: 50px; left: 50%; margin-left: -25px; top: 50%; margin-top: -25px'}
+                size={50}
+                color={"#006699"}
+                loading={this.state.loading}
+              />
+              <CanvasJSChart options = {this.state.chart_options}
+                onRef = {ref => this.setState({chart: ref})}
+              />
+              <small className="captionChart">* The continuous line depicts the expected value, while the shaded area represents the 95% prediction intervals provided by the model.</small>
+            </div>
+            <Modal
+              isOpen={this.state.showModal}
+              style={this.state.customStyles}
+              >
+              <ClipLoader
+                css={'position: absolute;z-index: 1; width: 50px; left: 50%; margin-left: -25px; top: 50%; margin-top: -25px'}
+                size={50}
+                color={"#006699"}
+                loading={this.state.loading}
+              />
+              <CanvasJSChart options = {this.state.chart_options}
+              />
+              <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
+            </Modal>
+            <Modal
+              isOpen={this.state.showInformationModal}
+              style={styles.customStylesExpand}
+              >
+              <div className="showInformation">
+                <h2>Source</h2>
+                <strong>Paper: </strong><a href="https://arxiv.org/abs/2004.04734" >https://arxiv.org/abs/2004.04734</a><br/><br/>
+                <strong>{'Last Update: '+this.state.lastUpdateDate}</strong><br/>
+                <button className="infoButton" onClick={this.handleCloseInformationModal}>Close</button>  
+              </div>    
+            </Modal>
           </div>
-        </div>
-        <div className='map-overlay' id='features'>
-          <h2>Data for State <img src={information_icon} className="information" onClick={this.handleOpenInformationModal} alt='information'></img></h2>
-          <div id='pd' className="table"><p>Select a state!</p></div>
-        </div>          
-        <div className='map-overlay-chart'>
-        <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
-        <ClipLoader
-          css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
-          size={50}
-          color={"#006699"}
-          loading={this.state.loading}
-        />
-        <CanvasJSChart options = {this.state.chart_options}
-          onRef = {ref => this.setState({chart: ref})}
-        />
-        <small className="captionChart">* The continuous line depicts the expected value, while the shaded area represents the 95% prediction intervals provided by the model.</small>
-        </div>
-        <Modal
-        isOpen={this.state.showModal}
-        style={this.state.customStyles}
-        >
-        <ClipLoader
-          css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
-          size={50}
-          color={"#006699"}
-          loading={this.state.loading}
-        />
-        <CanvasJSChart options = {this.state.chart_options}
-        />
-        <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
-        </Modal>
-        <Modal
-        isOpen={this.state.showInformationModal}
-        style={{
-          content : {
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            right: 'auto',
-            bottom: 'auto',
-            marginRight: '-50%',
-            transform: 'translate(-50%, -50%)',
-            width: '30%',
-          }
-        }}
-        >
-          <div className="showInformation">
-          <h2>Source</h2>
-          <strong>Paper: </strong><a href="https://arxiv.org/abs/2004.04734" >https://arxiv.org/abs/2004.04734</a><br/><br/>
-          <strong>{'Last Update: '+this.state.lastUpdateDate}</strong><br/>
-          <button className="infoButton" onClick={this.handleCloseInformationModal}>Close</button>  
-          </div> 
-        </Modal>
-      </div>
-        //RENDER COMPARATIVE
-        : <div className="mapContainer">
-        <div id='map' style={{width: '50%'}}>
-        <img src={back_icon} className="back" onClick={this.closeComparation} alt='minimize'></img>
-        </div> 
-        <div id='map2' style={{width: '50%', zIndex: 0,left: '50%'}}></div>               
-        {this.state.fill === 'PE'
-        ? <div id='legend' className='legend-comparative'>
-            <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
-            <span></span>
-            <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
-            <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
-            <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
-          </div>
-        : <div id='legend' className='legend-comparative'>
-            <strong>Number of Deaths Outside PI</strong>
-            <span></span><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
-            <h3 style={{position: 'absolute', left: 0, marginTop: '25px'}}>-26</h3>
-            <h3 style={{position: 'absolute', left: 96, marginTop: '25px'}}>0</h3>
-            <h3 style={{position: 'absolute', right: 0, marginTop: '25px'}}>26</h3>
+          //Dual map rendering
+          : 
+          <div className="mapContainer">
+            <div id='map' style={{width: '50%'}}>
+              <img src={back_icon} className="back" onClick={this.closeComparation} alt='minimize'></img>
+            </div> 
+            <div id='map2' style={{width: '50%', zIndex: 0,left: '50%'}}></div>               
+            {this.state.fill === 'PE'
+              ? 
+              <div id='legend' className='legend-comparative'>
+                <strong>PE</strong><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+                <span></span>
+                <h3 style={{position: 'absolute', left: 0, marginTop: '45px'}}>-250</h3>
+                <h3 style={{position: 'absolute', left: 96, marginTop: '45px'}}>0</h3>
+                <h3 style={{position: 'absolute', right: 0, marginTop: '45px'}}>250</h3>
+              </div>
+              : 
+              <div id='legend' className='legend-comparative'>
+                <strong>Number of Deaths Outside PI</strong>
+                <span></span><img src={alternate_icon} className="arrow" onClick={this.handleChangefill} alt='alternate'></img>
+                <h3 style={{position: 'absolute', left: 0, marginTop: '25px'}}>-26</h3>
+                <h3 style={{position: 'absolute', left: 96, marginTop: '25px'}}>0</h3>
+                <h3 style={{position: 'absolute', right: 0, marginTop: '25px'}}>26</h3>
+              </div>
+            }
+            <div className='map-overlay-comparative' id='features' style={{display: 'none'}}><h2>Data for State</h2><div id='pd' className="table"><p>Select a state!</p></div></div>
+            <div className='map-overlay-comparative2' id='features2' style={{display: 'none'}}><h2>Data for State</h2><div id='pd2' className="table"><p>Select a state!</p></div></div>          
+            <div className='map-overlay-chart-comparative' id='chart-comparative'>
+              <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
+              <ClipLoader
+                css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
+                size={50}
+                color={"#006699"}
+                loading={this.state.loading}
+              />
+              <CanvasJSChart options = {this.state.chart_options}
+                onRef = {ref => this.setState({chart: ref})}
+              />
+            </div>
+            <Modal
+              isOpen={this.state.showModal}
+              style={this.state.customStyles}
+              >
+              <ClipLoader
+                css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
+                size={50}
+                color={"#006699"}
+                loading={this.state.loading}
+              />
+              <CanvasJSChart options = {this.state.chart_options}/>
+              <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
+            </Modal>
           </div>
         }
-        <div className='map-overlay-comparative' id='features' style={{display: 'none'}}><h2>Data for State</h2><div id='pd' className="table"><p>Select a state!</p></div></div>
-        <div className='map-overlay-comparative2' id='features2' style={{display: 'none'}}><h2>Data for State</h2><div id='pd2' className="table"><p>Select a state!</p></div></div>          
-        <div className='map-overlay-chart-comparative' id='chart-comparative'>
-          <img src={expand_icon} className="button" onClick={this.handleOpenModal} alt='expand'></img>
-          <ClipLoader
-            css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
-            size={50}
-            color={"#006699"}
-            loading={this.state.loading}
-          />
-          <CanvasJSChart options = {this.state.chart_options}
-            onRef = {ref => this.setState({chart: ref})}
-          />
-        </div>
-        <Modal
-        isOpen={this.state.showModal}
-        style={this.state.customStyles}
-        >
-        <ClipLoader
-          css={'position: absolute;z-index: 1; margin: auto; bottom: 0; left: 0;margin-left: 45%;margin-bottom: 15%'}
-          size={50}
-          color={"#006699"}
-          loading={this.state.loading}
-        />
-        <CanvasJSChart options = {this.state.chart_options}
-        />
-        <img src={minimize_icon} className="button" style={{top: 0, marginTop: '3%'}}  onClick={this.handleCloseModal} alt='minimize'></img>   
-        </Modal>
       </div>
-        }
-    </div>
     );
   }
 }
