@@ -359,17 +359,20 @@ class App extends Component {
   }
 
   build_charts(model_name,state_name,state_short_name,last_obs_date){
+    if(last_obs_date.length === 10){
+      last_obs_date = last_obs_date+'T00:00:00.000Z'
+    } 
     let ev = this.state.statesLinesData[0][0].filter(element => element.state_short === state_short_name).map(function(element){
-      return {x: new Date(element.date),y: parseFloat(element.ev)}
+      return {x: new Date(element.date.slice(0,-1)),y: parseFloat(element.ev)}
     })
     let gt = this.state.statesLinesData[0][0].filter(element => element.state_short === state_short_name).map(function(element){
-      return {x: new Date(element.date),y: parseFloat(element.gt)}
+      return {x: new Date(element.date.slice(0,-1)),y: parseFloat(element.gt)}
     })
-    let gt_previous_last_obs = this.state.statesLinesData[0][0].filter(element => (element.state_short === state_short_name)&&(new Date(element.date) < new Date(last_obs_date))).map(function(element){
-        return {x: new Date(element.date),y: parseFloat(element.gt)}
+    let gt_previous_last_obs = this.state.statesLinesData[0][0].filter(element => (element.state_short === state_short_name)&&(new Date(element.date.slice(0,-1)) < new Date(last_obs_date.slice(0,-1)))).map(function(element){
+        return {x: new Date(element.date.slice(0,-1)),y: parseFloat(element.gt)}
     })
     let range = this.state.statesLinesData[0][0].filter(element => element.state_short === state_short_name).map(function(element){
-        return {x: new Date(element.date),y: [parseFloat(element.lb),parseFloat(element.ub)]}              
+        return {x: new Date(element.date.slice(0,-1)),y: [parseFloat(element.lb),parseFloat(element.ub)]}              
     })
     ev.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
     gt.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
@@ -383,10 +386,10 @@ class App extends Component {
     if(this.state.statesLinesData.length > 1){
       for (let modelId = 1; modelId < this.state.statesLinesData.length; modelId++) {
         let ev2 = this.state.statesLinesData[modelId][0].filter(element => element.state_short === state_short_name).map(function(element){
-          return {x: new Date(element.date),y: parseFloat(element.ev)}
+          return {x: new Date(element.date.slice(0,-1)),y: parseFloat(element.ev)}
         })
         let range2 = this.state.statesLinesData[modelId][0].filter(element => element.state_short === state_short_name).map(function(element){
-            return {x: new Date(element.date),y: [parseFloat(element.lb),parseFloat(element.ub)]}              
+            return {x: new Date(element.date.slice(0,-1)),y: [parseFloat(element.lb),parseFloat(element.ub)]}              
         })
         ev2.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
         range2.sort((a, b) => new Date(a["x"]) - new Date(b["x"]))
@@ -399,15 +402,24 @@ class App extends Component {
     }
     this.state.chart.subtitles[0].set("text",state_name)
     if(this.state.date.length === 1){
-      let forecastDate = new Date(last_obs_date)
+      let forecastDate = new Date(last_obs_date.slice(0,-1))
       forecastDate = forecastDate.getTime() + 1000*60*60*24
       forecastDate = new Date(forecastDate)
+      let date = new Date(last_obs_date.slice(0,-1))
+      date = date.getTime() + 1000*60*60*24*this.state.lookahead
+      date = new Date(date)
       this.state.chart.set("axisX",{stripLines: [{
         startValue: new Date('2020-01-01'),
         endValue: forecastDate,
         color: '#b3b3b3',
         lineDashType: 'dash',
         opacity: 0.2
+      },{
+        value: date,
+        opacity: 1,
+        label: 'Date',
+        labelFontColor: '#b3b3b3',
+        color: '#b3b3b3'
       }],
       viewportMinimum: new Date('2020-02-01'),
       viewportMaximum: new Date('2020-07-01'),})
@@ -491,7 +503,9 @@ class App extends Component {
           }
         })
       }
-    }   
+    }
+    document.getElementById('features').style.display = 'none';
+    document.getElementById('features2').style.display = 'none';   
   }
 
   async handleChangeLookahead(e) {
@@ -503,7 +517,9 @@ class App extends Component {
       geoData = await this.read_database(this.state.date[1],e.target.value)
       this.create_geojson(geoData,2)    
       this.update_data_charts(this.state.date[1],2)
-    }    
+    }
+    document.getElementById('features').style.display = 'none';
+    document.getElementById('features2').style.display = 'none';    
   }
 
   handleChangeSwitch(checked) {
