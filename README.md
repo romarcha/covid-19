@@ -125,3 +125,4 @@ pip install -r requirements.txt
     - [Paper 26 April](https://www.medrxiv.org/content/10.1101/2020.04.21.20074732v1.full.pdf)
         - [Appendix Curve Fit Tool](https://www.medrxiv.org/content/medrxiv/suppl/2020/04/25/2020.04.21.20074732.DC1/2020.04.21.20074732-2.pdf)
         - [Hospital Resource Utilization](https://www.medrxiv.org/content/medrxiv/suppl/2020/04/25/2020.04.21.20074732.DC1/2020.04.21.20074732-1.pdf)
+- 1 Point 3 Acres [Link](https://coronavirus.1point3acres.com/en/world)
