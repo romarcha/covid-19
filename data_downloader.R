@@ -18,6 +18,8 @@
 # 12. UMass
 # 13. ERDC
 # 14. Quantori
+# 15. PSI
+# 16. UA
 #
 # Data from respective modellers:
 # 1. Geneva
@@ -31,21 +33,11 @@
 # First reported date of predictions for each model updated on 17 May 2020.
 ###############################################################################################################
 
-rm(list=ls())
-
 # Set time zone as AEDT
 Sys.setenv(TZ="Australia/Sydney")
 
 # Set working directory
-wkdir = "~/Code/covid-19"
 setwd(wkdir)
-
-# Installing required packages
-packages = c("RCurl", "downloader")
-if(!all(packages %in% rownames(installed.packages()))){
-  install.packages(packages[!packages %in% rownames(installed.packages())])
-}
-lapply(packages, require, character.only=T)
 
 # Name of folder for storing prediction data from each model
 folder = c("Auquan",
@@ -62,10 +54,12 @@ folder = c("Auquan",
            "MOBS",
            "NotreDame",
            "UCLA",
-           rep("UChicago",4),
+           rep("UChicago",6),
            rep(c("UMass", "UT", "YYG"), each=2),
            "ERDC",
-           "Quantori")
+           "Quantori",
+           "PSI",
+           "UA")
 
 # Name of prediction model (separated by global and US states)
 model = c("Auquan",
@@ -104,6 +98,8 @@ model = c("Auquan",
           "UChicago60",
           "UChicago80",
           "UChicago100",
+          "UChicago10increase",
+          "UChicago30increase",
           "UMass_Exp",
           "UMass_MB",
           "UT_states",
@@ -111,7 +107,9 @@ model = c("Auquan",
           "YYG_states",
           "YYG_global",
           "ERDC",
-          "Quantori")
+          "Quantori",
+          "PSI",
+          "UA")
 
 # Link to download page
 model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Auquan-SEIR/",
@@ -150,14 +148,18 @@ model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-
               "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
               "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
               "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UMass-ExpertCrowd/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UMass-MechBayes/",
               "https://github.com/UT-Covid/USmortality/raw/master/forecasts/archive/UT-COVID19-states-forecast-",
               "https://github.com/UT-Covid/USmortality/raw/master/forecasts/archive/UT-COVID19-usa-forecast-",
-              "https://github.com/youyanggu/covid19_projections/raw/master/reich_forecasts/",
               "https://github.com/youyanggu/covid19_projections/raw/master/projections/combined/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/ERDC-SEIR/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Quantori-Multiagents/")
+              "https://github.com/youyanggu/covid19_projections/raw/master/projections/combined/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/USACE-ERDC_SEIR/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Quantori-Multiagents/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/PSI-DRAFT/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UA-EpiCovDA/")
 
 # File naming convention adopted
 file_name_web = c("-Auquan-SEIR.csv",
@@ -196,14 +198,18 @@ file_name_web = c("-Auquan-SEIR.csv",
                   "-UChicago-CovidIL_60.csv",
                   "-UChicago-CovidIL_80.csv",
                   "-UChicago-CovidIL_100.csv",
+                  "-UChicago-CovidIL_10_increase.csv",
+                  "-UChicago-CovidIL_30_increase.csv",
                   "-UMass-ExpertCrowd.csv",
                   "-UMass-MechBayes.csv",
                   ".csv",
                   ".csv",
-                  "-YYG-ParamSearch.csv",
+                  "_us.csv",
                   "_global.csv",
-                  "-ERDC-SEIR.csv",
-                  "-Quantori-Multiagents.csv")
+                  "-USACE-ERDC_SEIR.csv",
+                  "-Quantori-Multiagents.csv",
+                  "-PSI-DRAFT.csv",
+                  "-UA-EpiCovDA.csv")
 
 # List containing dates from first reported date until today for each model
 today = Sys.Date()
@@ -243,14 +249,18 @@ dates = list(seq(as.Date("2020-05-04"), today, by="days"), # Auquan
              seq(as.Date("2020-05-05"), today, by="days"), # UChicago60
              seq(as.Date("2020-05-05"), today, by="days"), # UChicago80
              seq(as.Date("2020-05-05"), today, by="days"), # UChicago100
+             seq(as.Date("2020-05-18"), today, by="days"), # UChicago10increase
+             seq(as.Date("2020-05-18"), today, by="days"), # UChicago30increase
              seq(as.Date("2020-04-13"), today, by="days"), # UMass_Exp
              seq(as.Date("2020-04-26"), today, by="days"), # UMass_MB
              seq(as.Date("2020-04-14"), today, by="days"), # UT_states
              seq(as.Date("2020-04-14"), today, by="days"), # UT_US
-             seq(as.Date("2020-04-13"), today, by="days"), # YYG_states
-             seq(as.Date("2020-04-13"), today, by="days"), # YYG_global
-             seq(as.Date("2020-05-14"), today, by="days"), # ERDC
-             seq(as.Date("2020-05-08"), today, by="days")) # Quantori
+             seq(as.Date("2020-04-01"), today, by="days"), # YYG_states
+             seq(as.Date("2020-04-02"), today, by="days"), # YYG_global
+             seq(as.Date("2020-05-18"), today, by="days"), # ERDC
+             seq(as.Date("2020-05-08"), today, by="days"), # Quantori
+             seq(as.Date("2020-05-18"), today, by="days"), # PSI
+             seq(as.Date("2020-05-17"), today, by="days")) # UA
 
 for (i in 1:length(model)){
   

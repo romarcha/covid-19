@@ -1,19 +1,9 @@
 ###############################################################################################################
-# Script for downloading and compiling ground truth data from JHU, NYT and ECDC
+# Script for downloading and compiling ground truth data from JHU, NYT, ECDC, IDPH and USAFacts
 ###############################################################################################################
 
-rm(list=ls())
-
 # Set working directory
-wkdir = "~/Code/covid-19"
 setwd(wkdir)
-
-# Installing required packages
-packages = c("dplyr", "downloader", "countrycode", "lubridate", "plyr", "tidyr")
-if(!all(packages %in% rownames(installed.packages()))){
-  install.packages(packages[!packages %in% rownames(installed.packages())])
-}
-lapply(packages, require, character.only=T)
 
 # JHU global data
 print("Downloading ground truth global data from JHU")
@@ -47,6 +37,18 @@ print("Downloading ground truth US states data from NYT")
 download("https://github.com/nytimes/covid-19-data/raw/master/us-states.csv", "nyt_us_states.csv", quiet=T)
 nyt_us_states = read.csv("nyt_us_states.csv", stringsAsFactors=F, check.names=F)
 unlink("nyt_us_states.csv", recursive=T)
+
+# IDPH Illinois data
+print("Downloading ground truth Illinois state data from IDPH")
+download("https://github.com/cobeylab/covid_IL/raw/master/Data/incident_idph_regions.csv", "idph.csv", quiet=T)
+idph = read.csv("idph.csv", stringsAsFactors=F, check.names=F)
+unlink("idph.csv", recursive=T)
+
+# USAFacts data
+print("Downloading ground truth US state data from USAFacts")
+download("https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_deaths_usafacts.csv", "usafacts.csv", quiet=T)
+usafacts = read.csv("usafacts.csv", stringsAsFactors=F, check.names=F)
+unlink("usafacts.csv", recursive=T)
 
 ###############################################################################################################
 # Standardising country/US state name and add iso3c/state abb.
@@ -113,7 +115,25 @@ ecdc_global = ecdc_global %>%
                             cum.death=cumsum(inc.death), gt_source="ECDC") %>%
               as.data.frame()
 
-gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
+idph = idph %>%
+       group_by(test_date) %>%
+       summarise_at(vars(deaths, inc_deaths), sum) %>%
+       dplyr::mutate(test_date=as.Date(test_date), location_long="Illinois", location_short="IL", gt_source="IDPH") %>%
+       rename_at(vars(test_date, deaths, inc_deaths), ~ c("date", "cum.death", "inc.death")) %>%
+       as.data.frame()
+
+usafacts = usafacts %>%
+           select(location_short=State, ends_with("/20")) %>%
+           group_by(location_short) %>%
+           summarise_all(list(~sum(.))) %>%
+           gather(date, cum.death, -location_short) %>%
+           group_by(location_short) %>%
+           dplyr::mutate(date=mdy(date), location_long=mapvalues(location_short, from=c(state.abb, "DC"), to=c(state.name, "District of Columbia"), warn_missing=F),
+                  inc.death=cum.death-lag(cum.death), gt_source="USAFacts") %>%
+           drop_na(inc.death) %>%
+           as.data.frame()
+
+gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global, idph, usafacts) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
 
 # Save into summary folder
 files_in_dir = list.files()
@@ -121,6 +141,6 @@ if(!"summary" %in% files_in_dir){
   dir.create("summary")
 }
 setwd(paste0(wkdir, "/summary/"))
-print("Saving ground truth data from JHU, NYT and ECDC in summary folder")
+print("Saving ground truth data from JHU, NYT, ECDC, IDPH and USAFacts in summary folder")
 write.csv(gt, "gt.csv", row.names=F)
 setwd(wkdir)

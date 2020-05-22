@@ -2,18 +2,6 @@
 # Script for standardising Geneva prediction data
 ###############################################################################################################
 
-rm(list = ls())
-
-# Installing required packages
-packages = c("countrycode", "plyr", "dplyr", "stringr")
-if(!all(packages %in% rownames(installed.packages()))){
-  install.packages(packages[!packages %in% rownames(installed.packages())])
-}
-lapply(packages, require, character.only = T)
-
-# Path to directory
-wkdir = "~/Code/covid-19"
-
 # Name of model and set working directory
 model = "Geneva"
 setwd(paste0(wkdir, "/", model))
