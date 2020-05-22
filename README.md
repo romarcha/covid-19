@@ -37,12 +37,30 @@ of the models currently being used to predict deaths and medical resources neede
 3) Download Python package requirements, which are detailed in the "requirements.txt" file. These
 dependencies can be installed by executing:
 
-```
-cd <project-path>
-pip install -r requirements.txt
-```
+    ```
+    cd <project-path>
+    pip install -r requirements.txt
+    ```
 
 ## Excecution
+
+1) Install R.
+
+    For Windows:<br/>
+    Download the binary setup file for R [here](https://cran.r-project.org/bin/windows/base/) and open the downloaded .exe file.
+    
+    For MacOS:<br/>
+    Download the appropriate version of .pkg file [here](https://cran.r-project.org/bin/macosx/) and open the downloaded .pkg file.
+    
+2) Install RStudio.
+    Choose the appropriate installer file for your operating system [here](https://rstudio.com/products/rstudio/), download it and then run it to install RStudio.
+    
+3) Download all ".R" files in the repository to your working directory and run the "main.R" file in RStudio by typing the following command in the console (note: remember to change the directory path on line 1 in "main.R"):
+    ```
+    setwd(<project-path>)
+    source("main.R")
+    ```
+
 
 ## Data Format
 
@@ -86,8 +104,8 @@ pip install -r requirements.txt
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
 - [x] [CU](https://covidprojections.azurewebsites.net)
 - [x] [CovidActNow](https://covidactnow.org)
-- [x] [ERDC]()
-- [ ] [GA_Tech]()
+- [x] [ERDC](https://github.com/erdc-cv19/covid19-forecast-hub)
+- [ ] [GA_Tech](https://www.cc.gatech.edu/~badityap/covid.htm)
 - [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
 - [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
 - [x] [Imperial](https://mrc-ide.github.io/covid19-short-term-forecasts/index.html#ensemble-model)
@@ -97,12 +115,14 @@ pip install -r requirements.txt
 - [ ] [MIT](https://www.covidanalytics.io/)
 - [ ] [MOBS](https://covid19.gleamproject.org/)
 - [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
-- [ ] [Quantori]
+- [ ] [PSI]()
+- [ ] [Quantori]()
+- [x] [UA]()
 - [ ] [UCLA](https://covid19.uclaml.org/)
 - [x] [UChicago](https://github.com/cobeylab/covid_IL)
 - [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)
 - [ ] [UMass](https://github.com/dsheldon/covid)
-- [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
+- [x] [UT](https://covid-19.tacc.utexas.edu/projections/)
 - [x] [YYG](https://covid19-projections.com/)
 
 
