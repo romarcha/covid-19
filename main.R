@@ -1,8 +1,5 @@
-wkdir = "~/COVID-19"        ###### Change path to your working directory accordingly
-if(!file.exists(wkdir)){
-  dir.create(wkdir)
-}
-setwd(wkdir)
+# Change working directory to be the one of this file.
+setwd(dirname(parent.frame(2)$ofile))
 
 packages = c("RCurl", "downloader", "countrycode", "lubridate", "plyr", "dplyr", "stringr", "tidyr", "usmap")
 if(!all(packages %in% rownames(installed.packages()))){

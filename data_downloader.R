@@ -37,7 +37,7 @@
 Sys.setenv(TZ="Australia/Sydney")
 
 # Set working directory
-setwd(wkdir)
+wkdir = getwd()
 
 # Name of folder for storing prediction data from each model
 folder = c("Auquan",
