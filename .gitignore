@@ -4,6 +4,7 @@ backupdata/
 bin/
 data/
 data*
+.csv
 include/
 pip-selfcheck.json
 plots_maps.pdf
