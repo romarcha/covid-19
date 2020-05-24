@@ -14,6 +14,7 @@ front-web/package-lock.json
 backend-web/node_modules
 backend-web/package-lock.json
 .DS_Store
+pyvenv.cfg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
