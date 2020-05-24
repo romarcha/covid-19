@@ -19,10 +19,10 @@ from sqlalchemy import create_engine
 
 
 class PredictionDataset:
-    def __init__(self, last_observation_date, data_frame, model_name):
-        self.last_observation_date = last_observation_date
+    def __init__(self, forecast_date, data_frame, model_name):
+        self.forecast_date = forecast_date
         # Only keep predictions and not historical observational data
-        self.df = data_frame[data_frame.index > last_observation_date]
+        self.df = data_frame[data_frame.index > forecast_date]
         self.processed_df = pd.DataFrame()
         self.model_name = model_name
         self.performance_evaluated = False
@@ -55,9 +55,9 @@ class PredictionDataset:
             max_val = max(state_df['deaths_mean'])
             max_date = state_df['deaths_mean'].idxmax()
             range_at_max = state_df.loc[max_date]['deaths_upper'] - state_df.loc[max_date]['deaths_lower']
-            result.append([state[1], area, max_val, max_date, range_at_max, self.last_observation_date, self.model_name])
+            result.append([state[1], area, max_val, max_date, range_at_max, self.forecast_date, self.model_name])
 
-        df_result = pd.DataFrame(result, columns=['state', 'area_between_bounds', 'max_ev', 'date_max_ev', 'range_at_max', 'last_observation_date', 'model_name'])
+        df_result = pd.DataFrame(result, columns=['state', 'area_between_bounds', 'max_ev', 'date_max_ev', 'range_at_max', 'forecast_date', 'model_name'])
         df_result.index = df_result['state']
         df_result = df_result.drop(columns='state')
         return df_result
@@ -69,13 +69,13 @@ class PredictionDataset:
             state_df = self.df[self.df['location'] == state[1]]
             max_val = max(state_df['deaths_mean'])
             max_date = state_df['deaths_mean'].idxmax()
-            print("Prediction max and date: "+str(self.last_observation_date)+" "+state[1]+": "+str(max_val)+", "+str(max_date))
+            print("Prediction max and date: "+str(self.forecast_date)+" "+state[1]+": "+str(max_val)+", "+str(max_date))
         return max(self.df)
 
     def evaluate_performance(self, gt_data):
         first = True
         for state in usa_states:
-            print("Evaluating performance for "+state[1]+" \t\t Model last obs: "+str(self.last_observation_date))
+            print("Evaluating performance for "+state[1]+" \t\t Forecast Date: "+str(self.forecast_date))
             aux_gt_df = gt_data[gt_data['state_long'] == state[1]]
             state_df = self.df[self.df['location'] == state[1]]
 
@@ -149,13 +149,12 @@ class PredictionDataset:
                 if (performance_df['LAPE'] > 1).any():
                     raise Exception("LAPE greater than 1")
 
-                performance_df['last_obs_date'] = self.last_observation_date
+                performance_df['forecast_date'] = self.forecast_date
                 # Check if inside, below or above bounds
                 #performance_df = performance_df.dropna()
 
                 performance_df['within_PI'] = ""
                 performance_df['outside_by'] = np.nan
-                performance_df['last_obs_date'] = self.last_observation_date
                 performance_df['model_name'] = self.model_name
 
                 performance_df.loc[performance_df['gt'] > performance_df['ub'], 'within_PI'] = "above"
@@ -169,7 +168,7 @@ class PredictionDataset:
 
                 performance_df['state_long'] = state[1]
                 performance_df['state_short'] = state[0]
-                performance_df['lookahead'] = (performance_df.index - self.last_observation_date).days
+                performance_df['lookahead'] = (performance_df.index - self.forecast_date).days
                 if first:
                     self.processed_df = performance_df
                     first = False
@@ -216,9 +215,9 @@ class CovidPredictionEvaluator:
                 perc_below) + ',' + str(perc_above) + ')')
 
         for dataset in self.datasets:
-            last_obs_date = dataset.last_observation_date
+            forecast_date = dataset.forecast_date
             for lookahead in range(1,5):
-                lookahead_data = self.all_data[(self.all_data['lookahead'] == lookahead) & (self.all_data['last_obs_date'] == last_obs_date)]
+                lookahead_data = self.all_data[(self.all_data['lookahead'] == lookahead) & (self.all_data['forecast_date'] == forecast_date)]
                 n_inside = lookahead_data[lookahead_data['within_PI'] == 'inside']['within_PI'].count()
                 n_below = lookahead_data[lookahead_data['within_PI'] == 'below']['within_PI'].count()
                 n_above = lookahead_data[lookahead_data['within_PI'] == 'above']['within_PI'].count()
@@ -226,7 +225,7 @@ class CovidPredictionEvaluator:
                 perc_inside = 100* n_inside / n_total
                 perc_below = 100 * n_below/ n_total
                 perc_above = 100 * n_above / n_total
-                print(str(last_obs_date)+' Lookahead = '+str(lookahead)+' ('+str(perc_inside)+','+str(perc_below)+','+str(perc_above)+')')
+                print(str(forecast_date)+' Lookahead = '+str(lookahead)+' ('+str(perc_inside)+','+str(perc_below)+','+str(perc_above)+')')
                 #lookahead_data.groupby('last_obs_date')
                 #percentage_inside = lookahead_data
 
@@ -249,7 +248,7 @@ class CovidPredictionEvaluator:
                     dataset_date = date_ - datetime.timedelta(days=lookahead_)
                     print("Dataset date: " + str(dataset_date))
                     for dataset in self.datasets:
-                        if dataset.last_observation_date == dataset_date:
+                        if dataset.forecast_date == dataset_date:
                             print("Dataset Found!")
                             pi_stats = dataset.get_pi_stats(date_)
                             values_str = "{:.0f}".format(pi_stats['n_inside'])+"("+"{:.0f}".format(pi_stats['n_below'])+","+"{:.0f}".format(pi_stats['n_above'])+")"
@@ -316,9 +315,9 @@ class CovidPredictionEvaluator:
             # Check if element string starts with 2020
             if "2020" in element:
                 print("Reading dataset for predictions on :"+element)
-                last_observation_on = pd.to_datetime(element[:10], format=filename_date_format)
-                if last_observation_on > latest_file:
-                    latest_file = last_observation_on
+                forecast_date = pd.to_datetime(element[:10], format=filename_date_format)
+                if forecast_date > latest_file:
+                    latest_file = forecast_date
                     latest_filename = element
                 # Open file containing predictions for that specific day
                 temp_df = pd.read_csv(self.model_directory+element+'/Hospitalization_all_locs.csv')
@@ -333,7 +332,7 @@ class CovidPredictionEvaluator:
                     if 'location_name' in temp_df:
                         temp_df = temp_df.rename(columns ={'location_name':'location'})
                 temp_df = temp_df[['location', 'deaths_mean', 'deaths_lower', 'deaths_upper']]
-                prediction_dataset = PredictionDataset(last_observation_date=last_observation_on,data_frame=temp_df,model_name=self.model_name)
+                prediction_dataset = PredictionDataset(forecast_date=forecast_date, data_frame=temp_df, model_name=self.model_name)
                 self.datasets.append(prediction_dataset)
 
         # Find oldest CSV file to extract GT time series
@@ -368,9 +367,9 @@ class CovidPredictionEvaluator:
         for state in usa_states:
             print('Extracting state data for '+state[1])
             state_df = pd.DataFrame()
-            state_df['date'] = pd.date_range(start=pd.to_datetime("2020-01-01"), end=pd.to_datetime("2020-12-31"))
-            state_df.index = state_df['date']
-            state_df = state_df.drop(columns=['date'])
+            state_df['target_date'] = pd.date_range(start=pd.to_datetime("2020-01-01"), end=pd.to_datetime("2020-12-31"))
+            state_df.index = state_df['target_date']
+            state_df = state_df.drop(columns=['target_date'])
             state_df['state_short'] = state[0]
             state_df['state_long'] = state[1]
             try:
@@ -433,5 +432,5 @@ evaluator = CovidPredictionEvaluator(model_directory='data/', model_name="IHME")
 evaluator.plot_results()
 evaluator.get_all_data_as_csv()
 evaluator.get_state_data_as_csv()
-evaluator.upload_to_db()
+#evaluator.upload_to_db()
 print("Written results to csv")
