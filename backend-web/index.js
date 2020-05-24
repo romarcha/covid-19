@@ -3,6 +3,7 @@ const app = express();
 const bodyParser = require('body-parser');
 const { Client } = require('pg')
 var cors = require('cors')
+var dateJSON = require('./last_update');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -32,10 +33,9 @@ app.get('/query', function (req, res) {
 });
 
 app.get('/timeLines', function (req, res) {
-
     const client = new Client(connectionData)
     client.connect()
-    var query = "SELECT date,gt,ev,lb,ub,state_short FROM all_results WHERE last_obs_date = '" + req.headers['model_date'] + "'";
+    var query = "SELECT * FROM all_results WHERE last_obs_date = '" + req.headers['model_date'] + "'";
     client.query(query)
     .then(response => {
         res.send(response.rows);
@@ -45,6 +45,10 @@ app.get('/timeLines', function (req, res) {
         client.end()
     })
     // res.send('Server: OK');
+});
+
+app.get('/lastUpdate', function (req, res) {
+    res.send(dateJSON.date)
 });
 
 app.listen(3500);

@@ -36,25 +36,66 @@ body {
     * Create a position for the map
     * on the page */
     #map {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 100%;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        z-index: -2;
+    }
+    #map2 {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50%;
+        z-index: -3;
+    }
+    .mapLeft {
+        left: 0;
+    }
+    .mapRight {
+        right: 0;
     }
     
-    /**
-    * Set rules for how the map overlays
-    * (information box and legend) will be displayed
-    * on the page. */
+
 .map-overlay {
     position: absolute;
     /* height: 500px !important; */
     width: 20%;
     height: 75%;
-    bottom: 0;
+    top: 0;
     right: 0;
     background: rgba(255, 255, 255, 0.8);
-    margin-right: 20px;
+    margin-right: 2%;
+    margin-top: 2%;
+    padding-bottom: 1%;
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
+.map-overlay-comparative {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 20%;
+    height: 40%;
+    margin-bottom: 2%;
+    margin-left: 2%;
+    background: rgba(255, 255, 255, 0.8);
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
+.map-overlay-comparative2 {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 20%;
+    height: 40%;
+    margin-bottom: 2%;
+    margin-right: 2%;
+    background: rgba(255, 255, 255, 0.8);
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
@@ -67,13 +108,89 @@ body {
 
 .map-overlay-chart {
     position: absolute;
+    z-index: -1;
     left: 0;
-    min-height: 40%;
+    bottom: 0;
+    padding: 10px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    width: 40%;
+    max-height: 40%;
     background: rgba(255, 255, 255, 0.8);
     margin-right: 20px;
     font-family: Arial, sans-serif;
     overflow: auto;
     border-radius: 3px;
+    text-align: left;
+}
+
+.captionChart{
+    font-size: 10px;    
+}
+
+.showInformation h2{
+    text-align: center;
+}
+.infoButton{
+    position: relative;
+    left: 50%;
+    width: 15%;
+    margin: 3%;
+    margin-left: -7.5%;
+    
+}
+
+.map-overlay-chart-comparative {
+    width: 40%;
+    position: absolute;
+    left: 50%;
+    margin-left: -20% !important;
+    bottom: 0;
+    padding: 10px;
+    margin-bottom: 20px;
+    margin-left: 10px;
+    max-height: 40%;
+    background: rgba(255, 255, 255, 0.8);
+    margin-right: 20px;
+    font-family: Arial, sans-serif;
+    overflow: auto;
+    border-radius: 3px;
+}
+
+#legend{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 0;
+    margin-right: 5%;
+    border-radius: 19px;
+    width: 200px !important;
+    height: 50px !important;
+}
+#legend span{
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    background: linear-gradient(90deg, rgba(17,6,201,1) 0%, rgba(255,255,255,1) 50%, rgba(228,9,9,1) 100%);
+    margin-right: 5%;
+    width: 200px !important;
+    height: 20px !important;
+}
+.legend-comparative{
+    top: 40%;
+    left: 50%;
+    margin-left: -100px;
+}
+
+.model_title{
+    margin: auto;
+    margin-top: 2%;
+}
+
+.information{
+    width: 20px;
+    cursor: pointer;
 }
 
 .map-overlay-select {
@@ -84,18 +201,40 @@ body {
     overflow: auto;
     border-radius: 3px;
 }
+
+.button{
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    width: 30px;
+    margin-left: 5%;
+    margin-top: 1%;
+    cursor: pointer;
+}
+
+.back{
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    width: 30px;
+    margin-left: 5%;
+    margin-top: 1%;
+}
+
+.arrow{
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    width: 20px;
+    margin-right: 5%;
+    margin-top: 5%;
+}
       
-#features {
+/* #features {
     top: 0;
     margin-top: 20px;
-}
-#features-chart{
-    bottom: 0;
-    /* height: 100px; */
-    margin-bottom: 20px;
-    margin-left: 10px;
-    width: 40%;
-}
+} */
 
 #features-selection {
     top: 0;
@@ -120,4 +259,20 @@ body {
     width: 10px;
     height: 10px;
     margin-right: 5px;
+}
+
+/* Cambios sobre la propia tabla */
+.table {
+width: 80%;
+margin: auto;
+}
+/* Espacio de relleno en celdas y cabeceras */
+/* .table td,th{
+padding:5px;
+} */
+/* Modificación de estilos en celdas */
+table td{
+text-align:center;
+border:2px solid #B3B6B7;
+font-size:12px;
 }
