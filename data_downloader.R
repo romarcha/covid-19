@@ -20,6 +20,8 @@
 # 14. Quantori
 # 15. PSI
 # 16. UA
+# 17. ISUandPKU
+# 18. SWC
 #
 # Data from respective modellers:
 # 1. Geneva
@@ -42,13 +44,14 @@ setwd(wkdir)
 # Name of folder for storing prediction data from each model
 folder = c("Auquan",
            "COVIDhub",
-           rep("CU",9),
+           rep("CU",10),
            "CovidActNow",
            "GA_Tech",
-           "Geneva",
+           rep("Geneva",3),
            "IHME",
-           rep(c("Imperial", "IowaStateLW"), each=2),
-           rep("JHU",3),
+           rep("Imperial",2),
+           "IowaStateLW",
+           "JHU",
            rep("LANL",6),
            "MIT",
            "MOBS",
@@ -59,7 +62,9 @@ folder = c("Auquan",
            "ERDC",
            "Quantori",
            "PSI",
-           "UA")
+           "UA",
+           "ISUandPKU",
+           "SWC")
 
 # Name of prediction model (separated by global and US states)
 model = c("Auquan",
@@ -73,17 +78,17 @@ model = c("Auquan",
           "CU-80contactw5p",
           "CU-nointerv",
           "CU-select",
+          "CU-nochange",
           "CovidActNow",
           "GA_Tech",
           "Geneva",
+          "Geneva",
+          "Geneva_states",
           "IHME",
           "Imperial1",
           "Imperial2",
-          "IowaStateLW10",
-          "IowaStateLW15",
+          "IowaStateLW",
           "JHU_IDD",
-          "JHU_IDD_High",
-          "JHU_IDD_Mod",
           "LANL_states_cum",
           "LANL_states_cum",
           "LANL_states_inc",
@@ -109,7 +114,9 @@ model = c("Auquan",
           "ERDC",
           "Quantori",
           "PSI",
-          "UA")
+          "UA",
+          "ISUandPKU",
+          "SWC")
 
 # Link to download page
 model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Auquan-SEIR/",
@@ -123,17 +130,17 @@ model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contactw5p/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-nointerv/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-select/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-nochange/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CovidActNow-SEIR_CAN/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/GT-DeepCOVID/",
               "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/predictions_deaths_",
+              "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/JHU_deaths_predictions_",
+              "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/JHU_US_deaths_predictions_",
               "https://ihmecovid19storage.blob.core.windows.net/archive/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Imperial-ensemble1/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Imperial-ensemble2/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM10/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM15/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSP/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSPHighDist/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSPModDist/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
@@ -159,7 +166,9 @@ model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/USACE-ERDC_SEIR/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Quantori-Multiagents/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/PSI-DRAFT/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UA-EpiCovDA/")
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UA-EpiCovDA/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/ISUandPKU-vSEIdR/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/SWC-TerminusCM/")
 
 # File naming convention adopted
 file_name_web = c("-Auquan-SEIR.csv",
@@ -173,17 +182,17 @@ file_name_web = c("-Auquan-SEIR.csv",
                   "-CU-80contactw5p.csv",
                   "-CU-nointerv.csv",
                   "-CU-select.csv",
+                  "-CU-nochange.csv",
                   "-CovidActNow-SEIR_CAN.csv",
                   "-GT-DeepCOVID.csv",
+                  ".csv",
+                  ".csv",
                   ".csv",
                   "/ihme-covid19.zip",
                   "-Imperial-ensemble1.csv",
                   "-Imperial-ensemble2.csv",
-                  "-IowaStateLW-STEM10.csv",
-                  "-IowaStateLW-STEM15.csv",
+                  "-IowaStateLW-STEM.csv",
                   "-JHU_IDD-CovidSP.csv",
-                  "-JHU_IDD-CovidSPHighDist.csv",
-                  "-JHU_IDD-CovidSPModDist.csv",
                   "_deaths_quantiles_us.csv",
                   "_deaths_quantiles_us_website.csv",
                   "_deaths_incidence_quantiles_us.csv",
@@ -209,58 +218,62 @@ file_name_web = c("-Auquan-SEIR.csv",
                   "-USACE-ERDC_SEIR.csv",
                   "-Quantori-Multiagents.csv",
                   "-PSI-DRAFT.csv",
-                  "-UA-EpiCovDA.csv")
+                  "-UA-EpiCovDA.csv",
+                  "-ISUandPKU-vSEIdR.csv",
+                  "-SWC-TerminusCM.csv")
 
-# List containing dates from first reported date until today for each model
+# First reported date for each model
 today = Sys.Date()
-dates = list(seq(as.Date("2020-05-04"), today, by="days"), # Auquan
-             seq(as.Date("2020-04-13"), today, by="days"), # Covidhub
-             seq(as.Date("2020-04-12"), today, by="days"), # CU-60contact
-             seq(as.Date("2020-04-12"), today, by="days"), # CU-70contact
-             seq(as.Date("2020-04-12"), today, by="days"), # CU-80contact
-             seq(as.Date("2020-05-03"), today, by="days"), # CU-80contact1x10p
-             seq(as.Date("2020-05-07"), today, by="days"), # CU-80contact1x5p
-             seq(as.Date("2020-05-03"), today, by="days"), # CU-80contactw10p
-             seq(as.Date("2020-05-07"), today, by="days"), # CU-80contactw5p
-             seq(as.Date("2020-04-12"), today, by="days"), # CU-nointerv
-             seq(as.Date("2020-05-10"), today, by="days"), # CU-select
-             seq(as.Date("2020-05-09"), today, by="days"), # CovidActNow
-             seq(as.Date("2020-05-04"), today, by="days"), # GA_Tech
-             seq(as.Date("2020-04-15"), today, by="days"), # Geneva
-             seq(as.Date("2020-03-25"), today, by="days"), # IHME
-             seq(as.Date("2020-03-15"), today, by="days"), # Imperial1
-             seq(as.Date("2020-03-15"), today, by="days"), # Imperial2
-             seq(as.Date("2020-04-26"), today, by="days"), # IowaStateLW10
-             seq(as.Date("2020-04-26"), today, by="days"), # IowaStateLW15
-             seq(as.Date("2020-04-24"), today, by="days"), # JHU_IDD
-             seq(as.Date("2020-05-03"), today, by="days"), # JHU_IDD_High
-             seq(as.Date("2020-05-03"), today, by="days"), # JHU_IDD_Mod
-             seq(as.Date("2020-04-05"), today, by="days"), # LANL_states_cum
-             seq(as.Date("2020-04-05"), today, by="days"), # LANL_states_cum
-             seq(as.Date("2020-04-15"), today, by="days"), # LANL_states_inc
-             seq(as.Date("2020-04-15"), today, by="days"), # LANL_states_inc
-             seq(as.Date("2020-04-26"), today, by="days"), # LANL_global_cum
-             seq(as.Date("2020-04-26"), today, by="days"), # LANL_global_inc
-             seq(as.Date("2020-04-22"), today, by="days"), # MIT
-             seq(as.Date("2020-04-13"), today, by="days"), # MOBS
-             seq(as.Date("2020-04-27"), today, by="days"), # NotreDame
-             seq(as.Date("2020-05-01"), today, by="days"), # UCLA
-             seq(as.Date("2020-05-05"), today, by="days"), # UChicago40
-             seq(as.Date("2020-05-05"), today, by="days"), # UChicago60
-             seq(as.Date("2020-05-05"), today, by="days"), # UChicago80
-             seq(as.Date("2020-05-05"), today, by="days"), # UChicago100
-             seq(as.Date("2020-05-18"), today, by="days"), # UChicago10increase
-             seq(as.Date("2020-05-18"), today, by="days"), # UChicago30increase
-             seq(as.Date("2020-04-13"), today, by="days"), # UMass_Exp
-             seq(as.Date("2020-04-26"), today, by="days"), # UMass_MB
-             seq(as.Date("2020-04-14"), today, by="days"), # UT_states
-             seq(as.Date("2020-04-14"), today, by="days"), # UT_US
-             seq(as.Date("2020-04-01"), today, by="days"), # YYG_states
-             seq(as.Date("2020-04-02"), today, by="days"), # YYG_global
-             seq(as.Date("2020-05-18"), today, by="days"), # ERDC
-             seq(as.Date("2020-05-08"), today, by="days"), # Quantori
-             seq(as.Date("2020-05-18"), today, by="days"), # PSI
-             seq(as.Date("2020-05-17"), today, by="days")) # UA
+dates = as.Date(c("2020-05-04", # Auquan
+             "2020-04-13", # Covidhub
+             "2020-04-12", # CU-60contact
+             "2020-04-12", # CU-70contact
+             "2020-04-12", # CU-80contact
+             "2020-05-03", # CU-80contact1x10p
+             "2020-05-07", # CU-80contact1x5p
+             "2020-05-03", # CU-80contactw10p
+             "2020-05-07", # CU-80contactw5p
+             "2020-04-12", # CU-nointerv
+             "2020-05-10", # CU-select
+             "2020-05-31", # CU-nochange
+             "2020-05-09", # CovidActNow
+             "2020-05-04", # GA_Tech
+             "2020-04-15", # Geneva
+             "2020-05-19", # Geneva
+             "2020-05-19", # Geneva
+             "2020-03-25", # IHME
+             "2020-03-15", # Imperial1
+             "2020-03-15", # Imperial2
+             "2020-04-26", # IowaStateLW
+             "2020-04-24", # JHU_IDD
+             "2020-04-05", # LANL_states_cum
+             "2020-04-05", # LANL_states_cum
+             "2020-04-15", # LANL_states_inc
+             "2020-04-15", # LANL_states_inc
+             "2020-04-26", # LANL_global_cum
+             "2020-04-26", # LANL_global_inc
+             "2020-04-22", # MIT
+             "2020-04-13", # MOBS
+             "2020-04-27", # NotreDame
+             "2020-05-01", # UCLA
+             "2020-05-05", # UChicago40
+             "2020-05-05", # UChicago60
+             "2020-05-05", # UChicago80
+             "2020-05-05", # UChicago100
+             "2020-05-18", # UChicago10increase
+             "2020-05-18", # UChicago30increase
+             "2020-04-13", # UMass_Exp
+             "2020-04-26", # UMass_MB
+             "2020-04-14", # UT_states
+             "2020-04-14", # UT_US
+             "2020-04-01", # YYG_states
+             "2020-04-02", # YYG_global
+             "2020-05-18", # ERDC
+             "2020-05-08", # Quantori
+             "2020-05-18", # PSI
+             "2020-05-17", # UA
+             "2020-05-25", # ISUandPKU
+             "2020-05-25")) # SWC
 
 for (i in 1:length(model)){
   
@@ -274,14 +287,15 @@ for (i in 1:length(model)){
   setwd(paste0(wkdir, "/", folder[i]))
   
   # Check for missing data in the folder
-  if (model[i]=="IHME"){
-    # Manually adding 2020-04-02 as link to download page exists but has the same data as 2020-04-01!
-    files_in_model_dir = c(list.files(pattern = ".csv"), "IHME-2020-04-02.csv")
+  files_in_model_dir = list.files(pattern = paste0("^", model[i], "(.*)csv$"))
+  last_date          = if(length(files_in_model_dir)!=0) max(as.Date(str_extract(files_in_model_dir, "[0-2]{4}[-][0-9]{2}[-][0-9]{2}"))) else dates[i]-1
+  if(model_url[i]!="https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/predictions_deaths_"){
+    missing_dates = seq(last_date+1, today, by="days")
+  }else if(last_date>=as.Date("2020-05-17")){
+    next
   }else{
-    files_in_model_dir = list.files(pattern = ".csv")
+    missing_dates = seq(last_date-1, as.Date("2020-05-17"), by="days")
   }
-  files_in_model_dir = sub("*.csv","",files_in_model_dir)
-  missing_dates      = sub(paste0(model[i], "."), "", setdiff(paste0(model[i], "-", dates[[i]]), files_in_model_dir))
   
   for(j in 1:length(missing_dates)){
     

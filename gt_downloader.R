@@ -38,17 +38,23 @@ download("https://github.com/nytimes/covid-19-data/raw/master/us-states.csv", "n
 nyt_us_states = read.csv("nyt_us_states.csv", stringsAsFactors=F, check.names=F)
 unlink("nyt_us_states.csv", recursive=T)
 
-# IDPH Illinois data
-print("Downloading ground truth Illinois state data from IDPH")
-download("https://github.com/cobeylab/covid_IL/raw/master/Data/incident_idph_regions.csv", "idph.csv", quiet=T)
-idph = read.csv("idph.csv", stringsAsFactors=F, check.names=F)
-unlink("idph.csv", recursive=T)
-
 # USAFacts data
-print("Downloading ground truth US state data from USAFacts")
+print("Downloading ground truth US states data from USAFacts")
 download("https://usafactsstatic.blob.core.windows.net/public/data/covid-19/covid_deaths_usafacts.csv", "usafacts.csv", quiet=T)
 usafacts = read.csv("usafacts.csv", stringsAsFactors=F, check.names=F)
 unlink("usafacts.csv", recursive=T)
+
+# CovidTracking US data
+print("Downloading ground truth US data from CovidTracking")
+download("https://github.com/COVID19Tracking/covid-tracking-data/raw/master/data/us_daily.csv", "covidtracking_us.csv", quiet=T)
+covidtracking_us = read.csv("covidtracking_us.csv", stringsAsFactors=F, check.names=F)
+unlink("covidtracking_us.csv", recursive=T)
+
+# CovidTracking US states data
+print("Downloading ground truth US states data from CovidTracking")
+download("https://github.com/COVID19Tracking/covid-tracking-data/raw/master/data/states_daily_4pm_et.csv", "covidtracking_us_states.csv", quiet=T)
+covidtracking_us_states = read.csv("covidtracking_us_states.csv", stringsAsFactors=F, check.names=F)
+unlink("covidtracking_us_states.csv", recursive=T)
 
 ###############################################################################################################
 # Standardising country/US state name and add iso3c/state abb.
@@ -115,13 +121,6 @@ ecdc_global = ecdc_global %>%
                             cum.death=cumsum(inc.death), gt_source="ECDC") %>%
               as.data.frame()
 
-idph = idph %>%
-       group_by(test_date) %>%
-       summarise_at(vars(deaths, inc_deaths), sum) %>%
-       dplyr::mutate(test_date=as.Date(test_date), location_long="Illinois", location_short="IL", gt_source="IDPH") %>%
-       rename_at(vars(test_date, deaths, inc_deaths), ~ c("date", "cum.death", "inc.death")) %>%
-       as.data.frame()
-
 usafacts = usafacts %>%
            select(location_short=State, ends_with("/20")) %>%
            group_by(location_short) %>%
@@ -133,7 +132,25 @@ usafacts = usafacts %>%
            drop_na(inc.death) %>%
            as.data.frame()
 
-gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global, idph, usafacts) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
+covidtracking_us = covidtracking_us %>%
+                   select(date, cum.death=death) %>%
+                   arrange(date) %>%
+                   dplyr::mutate(date=as.Date(as.character(date), format=c("%Y%m%d")), inc.death=cum.death-lag(cum.death), location_long="United States", 
+                          location_short="USA", gt_source="CovidTracking") %>%
+                   drop_na(inc.death)
+
+covidtracking_us_states = covidtracking_us_states %>%
+                          select(date, location_short=state, cum.death=death, inc.death=deathIncrease) %>%
+                          dplyr::mutate(date=as.Date(as.character(date), format=c("%Y%m%d")), location_short=mapvalues(location_short, from=c("AS", "GU", "MP", "PR", "VI"), 
+                                 to=c("ASM", "GUM", "MNP", "PRI", "VIR")), location_long=mapvalues(location_short, from=loc_short_us, to=loc_long_us, warn_missing=F), 
+                                 gt_source="CovidTracking") %>%
+                          drop_na(cum.death, inc.death)
+
+idph = covidtracking_us_states %>%
+       filter(location_short=="IL") %>%
+       dplyr::mutate(gt_source="IDPH")
+
+gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global, idph, usafacts, covidtracking_us, covidtracking_us_states) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
 
 # Save into summary folder
 files_in_dir = list.files()
@@ -141,6 +158,6 @@ if(!"summary" %in% files_in_dir){
   dir.create("summary")
 }
 setwd(paste0(wkdir, "/summary/"))
-print("Saving ground truth data from JHU, NYT, ECDC, IDPH and USAFacts in summary folder")
+print("Saving ground truth data from JHU, NYT, ECDC, IDPH, USAFacts and CovidTracking in summary folder")
 write.csv(gt, "gt.csv", row.names=F)
 setwd(wkdir)

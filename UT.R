@@ -12,7 +12,7 @@ forecast_date = as.Date(rep(str_extract(list.files(pattern=paste0("^", model, "(
 summary       = cbind(forecast_date=forecast_date, do.call(rbind.fill, summary))
 
 summary = summary %>%
-          select(ends_with("date"), location_short=state, starts_with("daily_deaths"), -daily_deaths_actual) %>%
+          select(ends_with("date"), location_short=state, starts_with("daily_deaths"), -daily_deaths_actual, -daily_deaths_av7) %>%
           dplyr::mutate(date=as.Date(date), lookahead=date-forecast_date, model_name=model, location_short=case_when(is.na(location_short) ~ "USA", 
                         !is.na(location_short) ~ mapvalues(location_short, from=c(state.name, "District of Columbia"), to=c(state.abb, "DC"))),
                         prediction_type=if_else(!is.na(daily_deaths_90CI_lower), "90_PI", "95_PI"), gt_source=case_when(forecast_date <= as.Date("2020-05-05") ~ "NYT",

@@ -22,16 +22,14 @@ prediction = prediction %>%
                                                                                        inc.death < perc_0.025 ~ "below"),
                     outside_95p_by=case_when(within_95_pi=="inside" ~ 0,
                                              within_95_pi=="above" ~ inc.death - perc_0.975,
-                                             within_95_pi=="below" ~ inc.death - perc_0.025,),
-                    gt_jhu=if_else(gt_source=="JHU", inc.death, NULL), gt_nyt=if_else(gt_source=="NYT", inc.death, NULL), 
-                    gt_ecdc=if_else(gt_source=="ECDC", inc.death, NULL), gt_idph=if_else(gt_source=="IDPH", inc.death, NULL),
-                    gt_usafacts=if_else(gt_source=="USAFacts", inc.death, NULL))
+                                             within_95_pi=="below" ~ inc.death - perc_0.025)) %>%
+              dplyr::rename(., gt=inc.death)
 
 loc_short                = unique(prediction$location_short)
 loc_long                 = countrycode(loc_short, origin="iso3c", destination="country.name", nomatch=NULL)
 loc_long                 = mapvalues(loc_long, from=c(state.abb, "DC"), to=c(state.name, "District of Columbia"))
 prediction$location_long = mapvalues(prediction$location_short, from=loc_short, to=loc_long)
-prediction               = prediction[,c(1:4,32,5:31,44:48,35:43)]
+prediction               = prediction[,c(1:4,32,5:31,34:43)]
 prediction_us            = prediction[nchar(prediction$location_short)==2|prediction$location_short=="USA",]
 prediction_rest_of_world = prediction[nchar(prediction$location_short)==3&prediction$location_short!="USA",]
 
