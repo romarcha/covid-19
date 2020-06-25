@@ -7,7 +7,7 @@ model = "YYG"
 setwd(paste0(wkdir, "/", model))
 
 # Ground truth source
-gt_source = "JHU"
+gt_source = "JHURD"
 
 # Load csv files for the model, combine and convert into standardised format
 summary       = lapply(list.files(pattern=paste0("^", model, "(.*)csv$")), function(i) read.csv(i, stringsAsFactors=F, check.names=F))

@@ -7,7 +7,7 @@ model = "LANL"
 setwd(paste0(wkdir, "/", model))
 
 # Ground truth source
-gt_source = "JHU"
+gt_source = "JHURD"
 
 # Load csv files for the model, combine and convert into standardised format
 summary_global = ldply(list.files(pattern=paste0("^", model, "_global_inc", "(.*)csv$")), function(i) read.csv(i, stringsAsFactors=F, check.names=F))

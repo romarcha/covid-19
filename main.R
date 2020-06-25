@@ -1,4 +1,4 @@
-wkdir = "~/COVID-19"        ###### Change path to your working directory accordingly
+wkdir = "~/Code/covid-19"        ###### Change path to your working directory accordingly
 if(!file.exists(wkdir)){
   dir.create(wkdir)
 }
@@ -11,6 +11,7 @@ if(!all(packages %in% rownames(installed.packages()))){
 lapply(packages, require, character.only=T)
 
 source("data_downloader.R")
+source("jhurd.R")
 source("gt_downloader.R")
 source("LANL.R")
 source("Geneva.R")

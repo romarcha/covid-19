@@ -132,6 +132,12 @@ usafacts = usafacts %>%
            drop_na(inc.death) %>%
            as.data.frame()
 
+usafacts_us = usafacts %>%
+              group_by(date, gt_source) %>%
+              dplyr::summarise(inc.death=sum(inc.death), cum.death=sum(cum.death)) %>%
+              as.data.frame() %>%
+              dplyr::mutate(location_short="USA", location_long="United States")
+
 covidtracking_us = covidtracking_us %>%
                    select(date, cum.death=death) %>%
                    arrange(date) %>%
@@ -150,7 +156,13 @@ idph = covidtracking_us_states %>%
        filter(location_short=="IL") %>%
        dplyr::mutate(gt_source="IDPH")
 
-gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global, idph, usafacts, covidtracking_us, covidtracking_us_states) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
+setwd(paste0(wkdir,"/JHURD"))
+jhurd = read.csv("jhurd.csv", stringsAsFactors=F, check.names=F)
+jhurd = jhurd %>%
+        dplyr::mutate(date=as.Date(date))
+
+gt = rbind.fill(jhu_global, jhu_us, nyt_us, nyt_us_states, ecdc_global, idph, usafacts, usafacts_us, covidtracking_us, covidtracking_us_states, jhurd) %>% select(date, location_long, location_short, gt_source, cum.death, inc.death)
+setwd(wkdir)
 
 # Save into summary folder
 files_in_dir = list.files()
