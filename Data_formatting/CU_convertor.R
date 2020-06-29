@@ -1,7 +1,7 @@
 CU_convertor = function(raw_file,col_names){
   # This file converts CU-model data file to our target file format
   raw_data=as_tibble(read.csv(raw_file,stringsAsFactors=F))
-  raw_data=filter(raw_data, grepl("cum", raw_data$target,fixed=T))
+  raw_data=filter(raw_data, grepl("inc", raw_data$target,fixed=T))
   raw_data_point=filter(raw_data,type=="point")
   raw_data_quantile=filter(raw_data,type=="quantile")
   
@@ -37,13 +37,15 @@ CU_convertor = function(raw_file,col_names){
   colnames(jhu_truth)[13]=as.character("2020-01-22")
   for(i in 14:ncol(jhu_truth)){
     colnames(jhu_truth)[i]=as.character(as.Date(colnames(jhu_truth)[13])+i-13)
+    jhu_truth[,i]= jhu_truth[,i] - jhu_truth[,i-1]
   }
   US_states=unique(jhu_truth$Province_State)
-  truth=vector("list",length = length(US_states))
-  names(truth)=US_states
+  truth=vector("list",length = length(US_states)+1)
+  names(truth)=c(US_states,"US")
   for(i in 1:length(US_states)){
     truth[[i]]=filter(jhu_truth,Province_State==US_states[i])[,-c(1:12)]
   }
+  truth$US = filter(jhu_truth,Country_Region=="US")[,-c(1:12)]
   
   for(i in 1:nrow(target_data)){ # fill in the ground truth data
     if( Sys.Date()- as.Date(target_data$target_date[i]) >0){

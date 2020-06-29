@@ -1,0 +1,166 @@
+---
+title: "US_regression"
+author: "Wanchuang Zhu"
+date: "22/05/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## sine function
+
+```{r}
+m=10
+n=20
+steps=10
+X=matrix(rnorm(m*n),m,n)*matrix(2*c(rep(1,m*n)),m,n,byrow = T) + matrix(steps*sin(rep(1:n,m)),m,n,byrow = T) # normal noise, cosine truth
+dat=t(rbind(X,matrix(steps*sin(rep(1:n,1)),1,n,byrow = T)))
+dat=as.data.frame(dat)
+model=lm(V11~. ,data=dat)
+fitted=model$fitted.values
+
+ts.plot(t(X),lwd=0.3)
+lines((mean_v=apply(X,2,mean)),col='green',lwd=2)
+lines(fitted,col="blue",lwd=2)
+```
+
+## Linear regression for US data, three models available: YYG, UT and Geneva
+
+
+```{r cars}
+Dat=read.csv('../raw-data/k_step_ahead.csv')
+library(dplyr)
+models= c("Geneva","UT","YYG")
+Dat=subset(Dat,model_name%in%models)
+Dat=subset(Dat,lookahead<=2)
+
+#Dat=subset(Dat,lookahead==1)
+
+common_date=Dat$target_end_date
+for(i in 1:length(models)){
+  common_date=intersect(common_date,subset(Dat,model_name %in% models[i])$target_end_date)
+}
+common_date=common_date[common_date<=Sys.Date()]
+
+Dat=subset(Dat,target_end_date %in% common_date)
+Dat=mutate(Dat,model_name_ahead = paste0(model_name,lookahead))
+Dat$target_end_date=as.Date(Dat$target_end_date)
+design=reshape(Dat[,c("target_end_date","model_name_ahead","expected_value")],idvar="target_end_date",direction = "wide",v.names = "expected_value",timevar = "model_name_ahead")
+#design=design[,-1]
+
+gt=subset(Dat,model_name=="YYG")
+gt=unique(subset(gt,target_end_date %in% as.Date( common_date))[,c("target_end_date","gt_jhu")])$gt_jhu
+dat=na.omit(cbind(design,gt))
+dat=as.data.frame(dat)
+model=lm(gt~. ,data=dat[,-1])
+fitted=model$fitted.values
+```
+## split the data and do regressiom separately
+
+```{r}
+week=weekdays(as.Date(dat$target_end_date))
+day1=c("Saturday","Sunday","Monday")
+dat1=subset(dat,weekdays(as.Date(target_end_date)) %in% day1)
+dat2=subset(dat,!weekdays(as.Date(target_end_date)) %in% day1)
+model1=lm(gt~. ,data=dat1[,-1])
+fitted1=model1$fitted.values
+
+model2=lm(gt~. ,data=dat2[,-1])
+fitted2=model2$fitted.values
+
+par(mfrow=c(1,2))
+plot(dat1$gt,col="red")
+lines(dat1$gt,col='red',lwd=3)
+lines(fitted1)
+title(main="Sat to Mon")
+
+plot(dat2$gt,col="red",lty=1)
+lines(dat2$gt,col='red',lwd=3)
+lines(fitted2)
+title(main="Tue to Fri")
+legend("topright",col=c("black","red"),lwd=c(1,3),c("Regression","gt"),cex=0.8)
+
+```
+
+# PCA 
+```{r}
+X=t(dat[,-c(1,ncol(dat))])
+X.t=t(X)  # dimension of n*m
+n=nrow(X.t)
+X.c= X%*%(diag(rep(1,n))- 1/n*matrix(1,n,1)%*%matrix(1,1,n))
+#for(i in 1:nrow(X.c)){X.c[i,]=X.c[i,]/sd(X.c[i,])}
+K.c=(X.c)%*%t(X.c)/(n-1) # n*n
+u=eigen(K.c)$vectors[,1]
+u=u-min(u)
+u=u/sum(u)
+pca_v2<-t(X)%*%u
+```
+
+## Lasso
+```{r pressure, echo=FALSE}
+library(HDCI)
+
+dr=Lasso(x=dat[,-c(1,ncol(dat))],y=dat$gt,fix.lambda = F)
+lassofitted=mypredict(dr,newx = dat[,-c(1,ncol(dat))])
+```
+## Mixture of experts
+```{r}
+library(mixtools)
+em.out <- regmixEM((dat$gt), as.matrix(dat[,2:4]),addintercept=T, verb = TRUE, epsilon = 1e-04,k=2)
+em.out[3:6]
+plot(em.out)
+```
+
+## Results
+```{r}
+library(ggplot2)
+dat=as_tibble(dat)
+dat$target_end_date=as.Date(dat$target_end_date)
+
+ts.plot((dat[,-c(1,ncol(dat))]),lwd=0.3)
+axis(1,at=1:nrow(dat),labels=week,las=2)
+lines(dat$gt, col=2)
+lines( mean_v<-rowMeans(dat[,-c(1,ncol(dat))]),col=3)
+lines(fitted, col=4)
+# lines(pca_v2, col=5)
+legend("topright",col=c(1:5),lwd=c(0.3,1,1,1,1),c("Obs","gt","Mean","Regression","PCA"),cex=0.8)
+
+
+
+colors <- c("linear regression" = "blue", "Lasso" = "green", "gt" = "red", "obs"="black","Mean"="pink","PCA"= "yellow","truth"="grey")
+
+
+cat(sum(abs(fitted-dat$gt)), "linear regression",'\n')
+cat(sum(abs(mean_v-dat$gt)), "Mean",'\n')
+# cat(sum(abs(pca_v2-dat$gt)), "PCA",'\n')
+
+```
+## Bayesian linear regression
+
+```{r}
+b0 = rep(0, 3+1)
+V0 = diag(rep(1e6,3+1))
+bayes.model=bayes.lm(gt~., data = dat[,-1],
+               prior = list(b0 = b0, V0 = V0))
+  
+fitted=model$fitted.values
+summary(bayes.model)
+```
+
+
+## Train and predict
+
+```{r}
+prediction=c()
+for( i in 21:23){
+  model=lm(gt~. ,data=dat[1:i,2:(ncol(dat))])
+  prediction=c(prediction,predict.lm(model,dat[i+1,2:(ncol(dat)-1)]))
+}
+
+cat(sum(abs(prediction-gt[22:24])),'regression','\n')
+cat(sum(abs(mean_v[22:24]-gt[22:24])),'mean','\n')
+```
+
+
