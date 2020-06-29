@@ -1,92 +1,94 @@
 ###############################################################################################################
-# Auquan      - Data for: US national and states.
-#               Note: Data from Reich Lab Github page.
-#
-# COVIDhub    - Data for: US national and states.
-#               Note: Data from Reich Lab Github page.
-#
-# CU          - Data for: US national and states.
-#               Note: Data from Reich Lab Github page. 6 different models available. See original repository: 
-#               https://github.com/shaman-lab/COVID-19Projection
-#
-# GA_Tech     - Data for: US national and states.
-#               Note: Data from Reich Lab Github page.
-#
-# Geneva      - Data for: Global.
-#
-# IHME        - Data for: Global and US states.
-#
-# Imperial    - Data for: US national.
-#               Note: Data from Reich Lab Github page. 2 different models available.
-#
-# IowaStateLW - Data for: US national and states. 
-#               Note: Data from Reich Lab Github page. 2 different models available. Will consider scrapping from 
-#               https://covid19.stat.iastate.edu in future.
-#
-# JHU         - Data for: US national
-#               Note: Data from Reich Lab Github page. 3 different models available.
-#
-# LANL        - Data for: Global and US states.
-#
-# MIT         - Data for: US states
-#               Note: Data from Reich Lab Github page. Will consider scrapping from 
-#               https://www.covidanalytics.io/projections in future.
-#
-# MOBS        - Data for: US national and states. 
-#               Note: Data from Reich Lab Github page. Will consider scrapping from 
-#               https://covid19.gleamproject.org in future.
-#
-# NotreDame   - Data for: Illinois, Indiana, Kentucky, Michigan, Minnesota, Ohio, Wisconsin
-#
-# UChicago    - Data for: Illinois.
-#               Note: Data from Reich Lab Github page. 4 different models available.
-#
-# UCLA        - Data for: US national and states.
-#               Note: Data from Reich Lab Github page. Will consider scrapping from 
-#               https://covid19.uclaml.org in future.
-#
-# UMass_Exp   - Data for: US national.
-#               Note: Data from Reich Lab Github page.
-#
-# UMass_MB    - Data for: US national and states.
-#               Note: Data from Reich Lab Github page.
-#
-# UT          - Data for: US national and states.
-#
-# YYG         - Data for: Global and US states.
-#
-# First result reported date for each model updated on 8 May 2020.
+# Script for downloading COVID-19 prediction data
 ###############################################################################################################
+###############################################################################################################
+#
+# Data from Reich Lab Github page (https://github.com/reichlab/covid19-forecast-hub/tree/master/data-processed):
+# 1. Auquan
+# 2. COVIDhub
+# 3. CU
+# 4. CovidActNow
+# 5. GA_Tech
+# 6. Imperial
+# 7. IowaStateLW
+# 8. JHU
+# 9. MIT
+# 10. MOBS
+# 11. UCLA
+# 12. UMass
+# 13. ERDC
+# 14. Quantori
+# 15. PSI
+# 16. UA
+# 17. ISUandPKU
+# 18. SWC
+#
+# Data from respective modellers:
+# 1. Geneva
+# 2. IHME
+# 3. LANL
+# 4. NotreDame
+# 5. UChicago
+# 6. UT
+# 7. YYG
+#
+# First reported date of predictions for each model updated on 17 May 2020.
+###############################################################################################################
+
 # Set time zone as AEDT
 Sys.setenv(TZ="Australia/Sydney")
 
-# Packages
-packages = c("RCurl", "downloader")
-install.packages(packages)
-lapply(packages, require, character.only = T)
+# Set working directory
+setwd(wkdir)
 
-# Path to working directory
-wkdir = "~/Code/covid-19"
+# Name of folder for storing prediction data from each model
+folder = c("Auquan",
+           "COVIDhub",
+           rep("CU",10),
+           "CovidActNow",
+           "GA_Tech",
+           rep("Geneva",3),
+           "IHME",
+           rep("Imperial",2),
+           "IowaStateLW",
+           "JHU",
+           rep("LANL",6),
+           "MIT",
+           "MOBS",
+           "NotreDame",
+           "UCLA",
+           rep("UChicago",6),
+           rep(c("UMass", "UT", "YYG"), each=2),
+           "ERDC",
+           "Quantori",
+           "PSI",
+           "UA",
+           "ISUandPKU",
+           "SWC")
 
-# Name of model, separated by global and US states for LANL, UT and YYG
+# Name of prediction model (separated by global and US states)
 model = c("Auquan",
           "COVIDhub",
-          "CU-60",
-          "CU-70",
-          "CU-80",
-          "CU-80_1x",
-          "CU-80w",
-          "CU-no",
+          "CU-60contact",
+          "CU-70contact",
+          "CU-80contact",
+          "CU-80contact1x10p",
+          "CU-80contact1x5p",
+          "CU-80contactw10p",
+          "CU-80contactw5p",
+          "CU-nointerv",
+          "CU-select",
+          "CU-nochange",
+          "CovidActNow",
           "GA_Tech",
           "Geneva",
+          "Geneva",
+          "Geneva_states",
           "IHME",
           "Imperial1",
           "Imperial2",
-          "IowaStateLW10",
-          "IowaStateLW15",
+          "IowaStateLW",
           "JHU_IDD",
-          "JHU_IDD_High",
-          "JHU_IDD_Mod",
           "LANL_states_cum",
           "LANL_states_cum",
           "LANL_states_inc",
@@ -101,12 +103,20 @@ model = c("Auquan",
           "UChicago60",
           "UChicago80",
           "UChicago100",
+          "UChicago10increase",
+          "UChicago30increase",
           "UMass_Exp",
           "UMass_MB",
           "UT_states",
           "UT_US",
           "YYG_states",
-          "YYG_global")
+          "YYG_global",
+          "ERDC",
+          "Quantori",
+          "PSI",
+          "UA",
+          "ISUandPKU",
+          "SWC")
 
 # Link to download page
 model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Auquan-SEIR/",
@@ -114,19 +124,23 @@ model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-60contact/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-70contact/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contact/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contact_1x/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contactw/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contact1x10p/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contact1x5p/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contactw10p/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-80contactw5p/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-nointerv/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-select/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CU-nochange/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/CovidActNow-SEIR_CAN/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/GT-DeepCOVID/",
               "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/predictions_deaths_",
+              "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/JHU_deaths_predictions_",
+              "https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/JHU_US_deaths_predictions_",
               "https://ihmecovid19storage.blob.core.windows.net/archive/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Imperial-ensemble1/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Imperial-ensemble2/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM10/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM15/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/IowaStateLW-STEM/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSP/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSPHighDist/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/JHU_IDD-CovidSPModDist/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
               "https://covid-19.bsvgateway.org/forecast/us/files/",
@@ -137,16 +151,24 @@ model_url = c("https://github.com/reichlab/covid19-forecast-hub/raw/master/data-
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/MOBS_NEU-GLEAM_COVID/",
               "https://github.com/confunguido/covid19_ND_forecasting/raw/master/output/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UCLA-SuEIR/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UChicago-CovidIL_40/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UChicago-CovidIL_60/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UChicago-CovidIL_80/",
-              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UChicago-CovidIL_100/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
+              "https://github.com/cobeylab/covid_IL/raw/master/Forecasting/forecast_hub_projections/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UMass-ExpertCrowd/",
               "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UMass-MechBayes/",
               "https://github.com/UT-Covid/USmortality/raw/master/forecasts/archive/UT-COVID19-states-forecast-",
               "https://github.com/UT-Covid/USmortality/raw/master/forecasts/archive/UT-COVID19-usa-forecast-",
-              "https://github.com/youyanggu/covid19_projections/raw/master/reich_forecasts/",
-              "https://github.com/youyanggu/covid19_projections/raw/master/projections/combined/")
+              "https://github.com/youyanggu/covid19_projections/raw/master/projections/combined/",
+              "https://github.com/youyanggu/covid19_projections/raw/master/projections/combined/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/USACE-ERDC_SEIR/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/Quantori-Multiagents/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/PSI-DRAFT/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/UA-EpiCovDA/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/ISUandPKU-vSEIdR/",
+              "https://github.com/reichlab/covid19-forecast-hub/raw/master/data-processed/SWC-TerminusCM/")
 
 # File naming convention adopted
 file_name_web = c("-Auquan-SEIR.csv",
@@ -154,19 +176,23 @@ file_name_web = c("-Auquan-SEIR.csv",
                   "-CU-60contact.csv",
                   "-CU-70contact.csv",
                   "-CU-80contact.csv",
-                  "-CU-80contact_1x.csv",
-                  "-CU-80contactw.csv",
+                  "-CU-80contact1x10p.csv",
+                  "-CU-80contact1x5p.csv",
+                  "-CU-80contactw10p.csv",
+                  "-CU-80contactw5p.csv",
                   "-CU-nointerv.csv",
+                  "-CU-select.csv",
+                  "-CU-nochange.csv",
+                  "-CovidActNow-SEIR_CAN.csv",
                   "-GT-DeepCOVID.csv",
+                  ".csv",
+                  ".csv",
                   ".csv",
                   "/ihme-covid19.zip",
                   "-Imperial-ensemble1.csv",
                   "-Imperial-ensemble2.csv",
-                  "-IowaStateLW-STEM10.csv",
-                  "-IowaStateLW-STEM15.csv",
+                  "-IowaStateLW-STEM.csv",
                   "-JHU_IDD-CovidSP.csv",
-                  "-JHU_IDD-CovidSPHighDist.csv",
-                  "-JHU_IDD-CovidSPModDist.csv",
                   "_deaths_quantiles_us.csv",
                   "_deaths_quantiles_us_website.csv",
                   "_deaths_incidence_quantiles_us.csv",
@@ -181,109 +207,125 @@ file_name_web = c("-Auquan-SEIR.csv",
                   "-UChicago-CovidIL_60.csv",
                   "-UChicago-CovidIL_80.csv",
                   "-UChicago-CovidIL_100.csv",
+                  "-UChicago-CovidIL_10_increase.csv",
+                  "-UChicago-CovidIL_30_increase.csv",
                   "-UMass-ExpertCrowd.csv",
                   "-UMass-MechBayes.csv",
                   ".csv",
                   ".csv",
-                  "-YYG-ParamSearch.csv",
-                  "_global.csv")
+                  "_us.csv",
+                  "_global.csv",
+                  "-USACE-ERDC_SEIR.csv",
+                  "-Quantori-Multiagents.csv",
+                  "-PSI-DRAFT.csv",
+                  "-UA-EpiCovDA.csv",
+                  "-ISUandPKU-vSEIdR.csv",
+                  "-SWC-TerminusCM.csv")
 
-# List containing dates from first reported date until today for each model
+# First reported date for each model
 today = Sys.Date()
-dates = list(seq(as.Date("2020-05-04"), today, by="days"),
-             seq(as.Date("2020-04-13"), today, by="days"),
-             seq(as.Date("2020-04-12"), today, by="days"),
-             seq(as.Date("2020-04-12"), today, by="days"),
-             seq(as.Date("2020-04-12"), today, by="days"),
-             seq(as.Date("2020-05-03"), today, by="days"),
-             seq(as.Date("2020-05-03"), today, by="days"),
-             seq(as.Date("2020-04-12"), today, by="days"),
-             seq(as.Date("2020-05-04"), today, by="days"),
-             seq(as.Date("2020-04-15"), today, by="days"),
-             seq(as.Date("2020-03-25"), today, by="days"),
-             seq(as.Date("2020-03-15"), today, by="days"),
-             seq(as.Date("2020-03-15"), today, by="days"),
-             seq(as.Date("2020-04-26"), today, by="days"),
-             seq(as.Date("2020-04-26"), today, by="days"),
-             seq(as.Date("2020-04-24"), today, by="days"),
-             seq(as.Date("2020-05-03"), today, by="days"),
-             seq(as.Date("2020-05-03"), today, by="days"),
-             seq(as.Date("2020-04-05"), today, by="days"),
-             seq(as.Date("2020-04-05"), today, by="days"),
-             seq(as.Date("2020-04-15"), today, by="days"),
-             seq(as.Date("2020-04-15"), today, by="days"),
-             seq(as.Date("2020-04-26"), today, by="days"),
-             seq(as.Date("2020-04-26"), today, by="days"),
-             seq(as.Date("2020-04-22"), today, by="days"),
-             seq(as.Date("2020-04-13"), today, by="days"),
-             seq(as.Date("2020-04-27"), today, by="days"),
-             seq(as.Date("2020-05-01"), today, by="days"),
-             seq(as.Date("2020-05-05"), today, by="days"),
-             seq(as.Date("2020-05-05"), today, by="days"),
-             seq(as.Date("2020-05-05"), today, by="days"),
-             seq(as.Date("2020-05-05"), today, by="days"),
-             seq(as.Date("2020-04-13"), today, by="days"),
-             seq(as.Date("2020-04-26"), today, by="days"),
-             seq(as.Date("2020-04-14"), today, by="days"),
-             seq(as.Date("2020-04-14"), today, by="days"),
-             seq(as.Date("2020-04-13"), today, by="days"),
-             seq(as.Date("2020-04-13"), today, by="days"))
-
-# Set working directory
-setwd(wkdir)
-
+dates = as.Date(c("2020-05-04", # Auquan
+             "2020-04-13", # Covidhub
+             "2020-04-12", # CU-60contact
+             "2020-04-12", # CU-70contact
+             "2020-04-12", # CU-80contact
+             "2020-05-03", # CU-80contact1x10p
+             "2020-05-07", # CU-80contact1x5p
+             "2020-05-03", # CU-80contactw10p
+             "2020-05-07", # CU-80contactw5p
+             "2020-04-12", # CU-nointerv
+             "2020-05-10", # CU-select
+             "2020-05-31", # CU-nochange
+             "2020-05-09", # CovidActNow
+             "2020-05-04", # GA_Tech
+             "2020-04-15", # Geneva
+             "2020-05-19", # Geneva
+             "2020-05-19", # Geneva
+             "2020-03-25", # IHME
+             "2020-03-15", # Imperial1
+             "2020-03-15", # Imperial2
+             "2020-04-26", # IowaStateLW
+             "2020-04-24", # JHU_IDD
+             "2020-04-05", # LANL_states_cum
+             "2020-04-05", # LANL_states_cum
+             "2020-04-15", # LANL_states_inc
+             "2020-04-15", # LANL_states_inc
+             "2020-04-26", # LANL_global_cum
+             "2020-04-26", # LANL_global_inc
+             "2020-04-22", # MIT
+             "2020-04-13", # MOBS
+             "2020-04-27", # NotreDame
+             "2020-05-01", # UCLA
+             "2020-05-05", # UChicago40
+             "2020-05-05", # UChicago60
+             "2020-05-05", # UChicago80
+             "2020-05-05", # UChicago100
+             "2020-05-18", # UChicago10increase
+             "2020-05-18", # UChicago30increase
+             "2020-04-13", # UMass_Exp
+             "2020-04-26", # UMass_MB
+             "2020-04-14", # UT_states
+             "2020-04-14", # UT_US
+             "2020-04-01", # YYG_states
+             "2020-04-02", # YYG_global
+             "2020-05-18", # ERDC
+             "2020-05-08", # Quantori
+             "2020-05-18", # PSI
+             "2020-05-17", # UA
+             "2020-05-25", # ISUandPKU
+             "2020-05-25")) # SWC
 
 for (i in 1:length(model)){
   
-  # List all folders in current working directory
+  # List all folders/files in working directory
   files_in_dir = list.files()
   
-  # Create a new folder for each model to store data
-  if(model[i] %in% files_in_dir == F){
-    dir.create(model[i])
+  # Create a new folder for each model
+  if(!folder[i] %in% files_in_dir){
+    dir.create(folder[i])
   }
-  setwd(paste0(wkdir, "/", model[i]))
+  setwd(paste0(wkdir, "/", folder[i]))
   
   # Check for missing data in the folder
-  if (model[i]=="IHME"){
-    # Manually adding 2020-04-02 as link to download page exists but has the same data as 2020-04-01!
-    files_in_model_dir = c(list.files(pattern = ".zip"), "IHME-2020-04-02.zip")
+  files_in_model_dir = list.files(pattern = paste0("^", model[i], "(.*)csv$"))
+  last_date          = if(length(files_in_model_dir)!=0) max(as.Date(str_extract(files_in_model_dir, "[0-2]{4}[-][0-9]{2}[-][0-9]{2}"))) else dates[i]-1
+  if(model_url[i]!="https://renkulab.io/gitlab/covid-19/covid-19-forecast/raw/master/outputs/predictions_deaths_"){
+    missing_dates = seq(last_date+1, today, by="days")
+  }else if(last_date>=as.Date("2020-05-17")){
+    next
   }else{
-    files_in_model_dir = list.files(pattern = ".csv")
+    missing_dates = seq(last_date-1, as.Date("2020-05-17"), by="days")
   }
-  files_in_model_dir = substring(files_in_model_dir, 1, nchar(files_in_model_dir) - 4)
-  missing_files      = setdiff(paste0(model[i], "-", dates[[i]]), files_in_model_dir)
-  missing_dates      = substring(missing_files, nchar(missing_files[1])-9)
   
   for(j in 1:length(missing_dates)){
     
     # Full url to each dataset for each model (NOTE: LANL has a slightly different url convention)
-    if(substring(model[i], 1, 4)=="LANL"){
+    if(grepl("LANL", model[i])){
       model_url_by_date = paste0(model_url[i], missing_dates[j], "/deaths/", missing_dates[j], file_name_web[i])
     }else{
       model_url_by_date = paste0(model_url[i], missing_dates[j], file_name_web[i])
     }
     
     # If the url exists, then download the data
-    # Naming of data: model name followed by forecast date
-    if (url.exists(model_url_by_date)){
-      print(paste0("Downloading data for model ", model[i], " for the forecast date ", missing_dates[j]))
+    # Naming of data: model name followed by reporting date
+    if(url.exists(model_url_by_date)){
+      print(paste0("Downloading data for model ", model[i], " for the reporting date ", missing_dates[j]))
       
-      if (model[i]=="IHME"){
+      if(model[i]=="IHME"){
         filename = paste0(model[i], "-", missing_dates[j], ".zip")
         download(model_url_by_date, filename, mode="wb", quiet=T)
         
         # Unzipping file, move file to current directory and delete folder
         unzip(filename)
         zip_dir = list.dirs('.', recursive=FALSE)
-        if (j==1){
+        if(j==1){
           ihme_csv_file = list.files(zip_dir, pattern=".csv")
         }else{
           ihme_csv_file = list.files(zip_dir, pattern="*pital*")
         }
         pathfrom = paste0(zip_dir, "/", ihme_csv_file)
-        file.rename(from=pathfrom, to=paste0(getwd(), "/", model[i], "-", missing_dates[j], ".csv"))
-        unlink(zip_dir, recursive=T)
+        file.rename(from=pathfrom, to=paste0(getwd(), "/", folder[i], "-", missing_dates[j], ".csv"))
+        unlink(c(zip_dir, filename), recursive=T)
       }else{
         filename = paste0(model[i], "-", missing_dates[j], ".csv")
         download(model_url_by_date, filename, mode="wb", quiet=T) 

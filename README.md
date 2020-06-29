@@ -37,12 +37,30 @@ of the models currently being used to predict deaths and medical resources neede
 3) Download Python package requirements, which are detailed in the "requirements.txt" file. These
 dependencies can be installed by executing:
 
-```
-cd <project-path>
-pip install -r requirements.txt
-```
+    ```
+    cd <project-path>
+    pip install -r requirements.txt
+    ```
 
 ## Excecution
+
+1) Install R.
+
+    For Windows:<br/>
+    Download the binary setup file for R [here](https://cran.r-project.org/bin/windows/base/) and open the downloaded .exe file.
+    
+    For MacOS:<br/>
+    Download the appropriate version of .pkg file [here](https://cran.r-project.org/bin/macosx/) and open the downloaded .pkg file.
+    
+2) Install RStudio.
+    Choose the appropriate installer file for your operating system [here](https://rstudio.com/products/rstudio/), download it and then run it to install RStudio.
+    
+3) Download all ".R" files in the repository to your working directory and run the "main.R" file in RStudio by typing the following command in the console (note: remember to change the directory path on line 1 in "main.R"):
+    ```
+    setwd(<project-path>)
+    source("main.R")
+    ```
+
 
 ## Data Format
 
@@ -67,7 +85,10 @@ pip install -r requirements.txt
 | perc_0.990       | double | Percentile of posterior estimate of daily deaths | 
 | gt_source        | string | Source of data used to evaluate the errors (depends on the data that each model uses to train their models.
 | gt_jhu           | integer | Observed daily deaths according to JHU |
-| gt_nyt           | integer | Observed daily deaths according to NYT | 
+| gt_nyt           | integer | Observed daily deaths according to NYT |
+| gt_ecdc          | integer | Observed daily deaths according to ECDC |
+| gt_idph          | integer | Observed daily deaths according to IDPH |
+| gt_usafacts      | integer | Observed daily deaths according to USAFacts |
 | error            | double | Error in prediction (gt - expected_value) |
 | pe               | double | Percentage Error |
 | adj_pe           | double | Adjusted Percentage Error |
@@ -79,6 +100,7 @@ pip install -r requirements.txt
 | outside_95p_by   | double | if inside 0, if outside is the amount by which it is outside of the 95% prediction interval |
 
 ## Data Models
+<<<<<<< HEAD
 
 - [x] CU models [Columbia University](https://github.com/shaman-lab/COVID-19Projection)
 - [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
@@ -86,19 +108,32 @@ pip install -r requirements.txt
 - [x] [YYG](https://covid19-projections.com/)
 - [x] [University of Texas-Austin](https://covid-19.tacc.utexas.edu/projections/)
 - [x] [University of Massachusetts](https://github.com/tomcm39/COVID19_expert_survey)
-- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
-- [x] [LANL](https://covid-19.bsvgateway.org/)
-- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
-- [ ] [Auquan]()
+=======
+- [ ] [Auquan](https://covid19-infection-model.auquan.com/)
 - [ ] [COVIDhub](https://github.com/reichlab/covid19-forecast-hub)
-- [ ] [GA_Tech]()
-- [x] [IowaStateLW]()
-- [x] [JHU_IDD]()
+- [x] [CU](https://covidprojections.azurewebsites.net)
+- [x] [CovidActNow](https://covidactnow.org)
+- [x] [ERDC](https://github.com/erdc-cv19/covid19-forecast-hub)
+- [ ] [GA_Tech](https://www.cc.gatech.edu/~badityap/covid.htm)
+>>>>>>> 0e98d6474b4e35d17762fa69c7d40c004107f3b6
+- [x] [Geneva](https://renkulab.shinyapps.io/COVID-19-Epidemic-Forecasting/)
+- [x] [IHME](https://covid19.healthdata.org/united-states-of-america)
+- [x] [Imperial](https://mrc-ide.github.io/covid19-short-term-forecasts/index.html#ensemble-model)
+- [x] [IowaStateLW](https://covid19.stat.iastate.edu)
+- [x] [JHU](https://github.com/HopkinsIDD/COVIDScenarioPipeline)
+- [x] [LANL](https://covid-19.bsvgateway.org/)
 - [ ] [MIT](https://www.covidanalytics.io/)
-- [ ] [MOBS]()
-- [ ] [UCLA]()
-- [ ] [UChicago]()
-- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)[UMass](https://github.com/dsheldon/covid)
+- [ ] [MOBS](https://covid19.gleamproject.org/)
+- [x] [Notre Dame](https://github.com/confunguido/covid19_ND_forecasting)
+- [ ] [PSI]()
+- [ ] [Quantori]()
+- [x] [UA]()
+- [ ] [UCLA](https://covid19.uclaml.org/)
+- [x] [UChicago](https://github.com/cobeylab/covid_IL)
+- [ ] [UMass](https://github.com/tomcm39/COVID19_expert_survey)
+- [ ] [UMass](https://github.com/dsheldon/covid)
+- [x] [UT](https://covid-19.tacc.utexas.edu/projections/)
+- [x] [YYG](https://covid19-projections.com/)
 
 
 ## Useful Links
@@ -120,3 +155,4 @@ pip install -r requirements.txt
     - [Paper 26 April](https://www.medrxiv.org/content/10.1101/2020.04.21.20074732v1.full.pdf)
         - [Appendix Curve Fit Tool](https://www.medrxiv.org/content/medrxiv/suppl/2020/04/25/2020.04.21.20074732.DC1/2020.04.21.20074732-2.pdf)
         - [Hospital Resource Utilization](https://www.medrxiv.org/content/medrxiv/suppl/2020/04/25/2020.04.21.20074732.DC1/2020.04.21.20074732-1.pdf)
+- 1 Point 3 Acres [Link](https://coronavirus.1point3acres.com/en/world)
