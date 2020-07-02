@@ -38,6 +38,10 @@ us_wide=us_wide[order(us_wide$target_end_date),]
 ## take the data into log-scale
 us_wide_log=(us_wide)
 us_wide_log[,c(2:16)]=log(us_wide_log[,c(2:16)])
+####---------------------------------------------------------------Data is ready
+
+####---------------------------------------------------------------EDA plots
+source('US_regression_EDA.R')
 train.num=30 # split training and prediction set
 
 ## regression
@@ -266,7 +270,7 @@ pred.Y=c()
 coef.list=list()
 num.para=17
 
-priors.dist=list(beta=list(mu=rep(0,num.para-1),cv=diag(10^(5),num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
+priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(10^(5),num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
 
 for(train.num in train.num.start:nrow(us_wide_log)){
   
@@ -324,11 +328,11 @@ pred.part$Date=rep(c((1+train.num.start):nrow(us_wide_log)),iter.num*sim.num)
 
 all.box=bind_rows(train.part,pred.part)
 pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_boxplot()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date)) 
-ggsave(filename = "US_boxplot.pdf",plot = pl,width = 10, height = 10)
+ggsave(filename = "../Results/US_boxplot.pdf",plot = pl,width = 10, height = 10,device = 'jpeg')
 
-pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_violin()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date))
+pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_violin()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date))
 
-ggsave(filename = "US_violin.pdf",plot = pl,width = 10, height = 10)
+ggsave(filename = "../Results/US_violin.pdf",plot = pl,width = 10, height = 10)
 
 
 # results of coefficients
