@@ -1,4 +1,5 @@
 # Automatically generated files
+*.tex
 .idea/
 backupdata/
 bin/
