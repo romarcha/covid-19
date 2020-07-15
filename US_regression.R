@@ -1,4 +1,6 @@
 #################################################prepare the data
+cat="inc" # "acc" This variable indicates whether incident death or accumulate death
+
 us=read.csv('../raw-data/us_result.csv')
 # gt=read.csv('../raw-data/gt.csv')
 library(dplyr)
@@ -38,19 +40,35 @@ us_wide=us_wide[order(us_wide$target_end_date),]
 ## take the data into log-scale
 us_wide_log=(us_wide)
 us_wide_log[,c(2:16)]=log(us_wide_log[,c(2:16)])
-####---------------------------------------------------------------Data is ready
+####----
+#   -----------------------------------------------------------Data is ready
 
-####---------------------------------------------------------------EDA plots
+####----
+#------------------------------------------------------------------EDA plots
 source('US_regression_EDA.R')
-train.num=30 # split training and prediction set
 
-## regression
-model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
+####----   
+#---------------------------------------------------- regression (MLE version)
+Dum=FALSE #FALSE
+train.num=30 # split training and prediction set
+if(Dum){
+  model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
+} else{
+  model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
+}
+
 fitted=model$fitted.values
 pred=c()
-for(train in train.num:(nrow(us_wide_log)-1)){
-  model=lm(gt~. ,data=us_wide_log[1:train,-1])
-  pred=c(pred,predict.lm(model,newdata = us_wide_log[(train+1),-1]))}
+if(Dum){
+  for(train in train.num:(nrow(us_wide_log)-1)){
+    model=lm(gt~. ,data=us_wide_log[1:train,-1])
+    pred=c(pred,predict.lm(model,newdata = us_wide_log[(train+1),-1]))}
+} else{
+  for(train in train.num:(nrow(us_wide_log)-1)){
+    model=lm(gt~. ,data=us_wide_log[1:train,-c(1,ncol(us_wide_log))])
+    pred=c(pred,predict.lm(model,newdata = us_wide_log[(train+1),-c(1,ncol(us_wide_log))]))}
+}
+
 
 
 plot(exp(us_wide_log$gt),type = 'l')
@@ -66,8 +84,8 @@ sum(abs((us_wide$gt[(train.num+1):(nrow(us_wide_log))]-us_wide$YYG_1[(train.num+
 
 
 
-
-## Results
+####----
+##------------------------------------------------------------ Results
 library(ggplot2)
 
 us_wide_all=us_wide
@@ -80,9 +98,9 @@ ggplot(us_long, aes(x=target_end_date,y=deaths,colour=var)) + geom_line() + scal
 
 ggplot(filter(us_long,var %in% c("gt","fitted")), aes(x=target_end_date,y=deaths,colour=var)) + geom_line() 
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------
-### Bayesian inference without constraints with uniform priors
-priors.dist=matrix(c(c(-10^5,10^5),rep(c(-100,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=T)
+####----
+### -------------Bayesian inference without constraints with uniform priors
+priors.dist=matrix(c(c(-10^5,10^5),rep(c(-100,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=TRUE)
 row.names(priors.dist)=c("inter",rep("coef",14),"week","sig")
 log.post.likelihood=function(data,paras){
   #data is the data
@@ -152,7 +170,7 @@ points(us_wide$gt,col='red')
 lines(us_wide$gt,col='red')
 #-----------------------------------------------------------------------------------------------------------------------------------------------
 ### Bayesian inference with constraints with uniform priors
-priors.dist=matrix(c(c(-10^5,10^5),rep(c(0,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=T)
+priors.dist=matrix(c(c(-10^5,10^5),rep(c(0,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=TRUE)
 row.names(priors.dist)=c("inter",rep("coef",14),"week","sig")
 
 # starting points
@@ -212,10 +230,61 @@ for(iter in 1:iter.num){
   y.hat[iter,]= as.matrix(temp)%*%paras[-length(paras)]
   if(iter%%500 ==0){cat("iteration=",iter)}
 }
+save.image(file = "../Results/BLR/US_BLR_with_positive_prior.RData")
 boxplot(exp(y.hat))
 points(us_wide$gt,col='red')
 lines(us_wide$gt,col='red')
-#-----------------------------------------------------------------------------------------------------------------------------------------------
+####----
+### Bayesian inference without constraints with Conjugate priors. try not to use the dummy variable
+# sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
+library(invgamma)
+library(MASS)
+train.num=36
+num.para=16
+X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2,ncol(us_wide_log))]))
+y=as.matrix(us_wide_log[1:train.num,2])
+
+priors.dist=list(beta=list(mu=rep(0,num.para-1),cv=diag(10^5,num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
+
+#hyperparameters
+Delta_0 = solve( priors.dist$beta$cv)
+Delta_n = Delta_0 + t(X)%*%X
+iDelta_n = solve(Delta_n)
+mu_0 = priors.dist$beta$mu
+mu_n = solve(Delta_n)%*% (Delta_0 %*% mu_0 + t(X)%*% y)
+a_0=priors.dist$sig["a0"]
+a_n = a_0  + nrow(us_wide_log[1:train.num,]) # posterior parameter of sigma^2
+b_0 = priors.dist$sig["b0"]
+b_n = b_0 + 0.5* (t(y)%*%y + t(as.matrix(mu_0))%*% Delta_0 %*% as.matrix(mu_0) - t(mu_n) %*% Delta_n%*% mu_n)
+
+
+# starting points
+model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
+paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
+
+
+# MCMC-Gibbs sampler
+iter.num=2000
+result.mat=matrix(NA,iter.num,length(paras))
+y.hat=matrix(NA,iter.num,nrow(us_wide))
+for(iter in 1:iter.num){
+  # draw sigma^2 
+  result.mat[iter,length(paras)] = rinvgamma(n=1,shape = a_n, scale = b_n)
+  result.mat[iter,-length(paras)] = mvrnorm(n=1,mu=mu_n,Sigma = result.mat[iter,length(paras)]* iDelta_n)
+  
+  temp=cbind(1,us_wide_log[,-c(1,2)])
+  y.hat[iter,]= X%*%result.mat[iter,-length(paras)]
+}
+boxplot(exp(y.hat))
+points(us_wide$gt,col='red')
+lines(us_wide$gt,col='red')
+title(main="gt VS. posterior samples of Y")
+
+boxplot(result.mat)
+points(model$coefficients,col='red')
+title(main= " Comparison between MCMC and MLE of estimation")
+
+####----
 ### Bayesian inference without constraints with Conjugate priors
 # sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
 library(invgamma)
@@ -265,16 +334,25 @@ boxplot(result.mat)
 points(model$coefficients,col='red')
 title(main= " Comparison between MCMC and MLE of estimation")
 #-----------------------------------------------------
+###                Bayesian inference without constraints with Conjugate priors. Training VS. Prediction
+
+Dum=TRUE  # include the dummy variable (week) or not. TRUE;FALSE
 train.num.start=30
 pred.Y=c()
 coef.list=list()
-num.para=17
+if(Dum){num.para=17} else(num.para=16)
+
 
 priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(10^(5),num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
 
 for(train.num in train.num.start:nrow(us_wide_log)){
   
-  X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2)]))
+  if(Dum){
+    X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2)]))
+  } else{
+    X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2,ncol(us_wide_log))]))
+  }
+  
   y=as.matrix(us_wide_log[1:train.num,2])
   #hyperparameters
   Delta_0 = solve( priors.dist$beta$cv)
@@ -287,8 +365,14 @@ for(train.num in train.num.start:nrow(us_wide_log)){
   b_0 = priors.dist$sig["b0"]
   b_n = b_0 + 0.5* (t(y)%*%y + t(as.matrix(mu_0))%*% Delta_0 %*% as.matrix(mu_0) - t(mu_n) %*% Delta_n%*% mu_n)
   # starting points
-  model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
-  paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
+  if(Dum){
+    model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
+    paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
+  } else{
+    model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
+    paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
+  }
+  
   
   # MCMC-Gibbs sampler
   iter.num=2000
@@ -304,7 +388,12 @@ for(train.num in train.num.start:nrow(us_wide_log)){
     y.hat[iter,]= X%*%result.mat[iter,-length(paras)]
   }
   coef.list[[train.num-train.num.start+1]]=result.mat
-  X.new=cbind(1,us_wide_log[(1+train.num),-c(1,2)])
+  if(Dum){
+    X.new=cbind(1,us_wide_log[(1+train.num),-c(1,2)])
+  } else{
+    X.new=cbind(1,us_wide_log[(1+train.num),-c(1,2,ncol(us_wide_log))])
+  }
+  
   if(!anyNA(X.new)){
     pred.mean=as.matrix(X.new)%*% t(result.mat[,-length(paras)])
     temp.Y=c()
@@ -325,15 +414,38 @@ colnames(pred.part)= as.character(us_wide_log$target_end_date[(1+train.num.start
 pred.part=pivot_longer(as_tibble(pred.part),cols=everything(),names_to = "Target.Date",values_to = "Inc.death")%>% mutate(.,Category="prediction")
 pred.part$gt=rep(us_wide$gt[(1+train.num.start):nrow(us_wide_log)],iter.num*sim.num)
 pred.part$Date=rep(c((1+train.num.start):nrow(us_wide_log)),iter.num*sim.num)
-
 all.box=bind_rows(train.part,pred.part)
+if(Dum){
+  save.image(file = "../Results/BLR/US_BLR_Conjugate.RData")
+} else{
+  save.image(file = "../Results/BLR/US_BLR_Conjugate_without_dummy.RData")
+}
 pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_boxplot()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date)) 
-ggsave(filename = "../Results/US_boxplot.pdf",plot = pl,width = 10, height = 10,device = 'jpeg')
+if(Dum){
+  ggsave(filename = "../Results/BLR/US_boxplot.pdf",plot = pl,width = 10, height = 10)
+} else{
+  ggsave(filename = "../Results/BLR/US_boxplot_without_dummy.pdf",plot = pl,width = 10, height = 10,device = 'jpeg')
+}
+
+if(Dum){
+  ggsave(filename = "../Results/BLR/US_boxplot.jpeg",plot = pl,width = 10, height = 10)
+} else{
+  ggsave(filename = "../Results/BLR/US_boxplot_without_dummy.jpeg",plot = pl,width = 10, height = 10,device = 'jpeg')
+}
 
 pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_violin()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date))
 
-ggsave(filename = "../Results/US_violin.pdf",plot = pl,width = 10, height = 10)
+if(Dum){
+  ggsave(filename = "../Results/US_violin.pdf",plot = pl,width = 10, height = 10)
+} else(
+  ggsave(filename = "../Results/US_violin_without_dummy.pdf",plot = pl,width = 10, height = 10)
+)
 
+if(Dum){
+  ggsave(filename = "../Results/BLR/US_violin.jpeg",plot = pl,width = 10, height = 10)
+} else(
+  ggsave(filename = "../Results/BLR/US_violin_without_dummy.jpeg",plot = pl,width = 10, height = 10)
+)
 
 # results of coefficients
 coef.list=coef.list[1:(length(coef.list)-1)]
@@ -350,5 +462,20 @@ for (i in 1:length(coef.list)){
 
 pl=ggplot(coef.tibble,aes(x=Variable,y = Value,color=Variable)) + geom_boxplot() +theme(axis.text.x = element_text( angle = 90)) +facet_wrap( facets= vars(End_date),nrow = 2,ncol=3)
 pl
-ggsave(filename = "US_coef_boxplot.pdf",plot = pl,width = 10, height = 10)
+ggsave(filename = "../Results/BLR/US_coef_boxplot.pdf",plot = pl,width = 10, height = 10)
+
+
+## 
+
+load(file = "../Results/BLR/US_BLR_Conjugate.RData")
+Temp=filter(all.box,Category=="prediction")%>% mutate(.,Category="pred.dummy")
+load(file = "../Results/BLR/US_BLR_Conjugate_without_dummy.RData")
+mytemp=filter(all.box,Category=="prediction") %>% mutate(.,Category="pred.no.dummy")
+Pred.all=bind_rows(filter(all.box,Category=="train") ,Temp,mytemp)
+
+pl<-ggplot(Pred.all,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_violin()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date)) 
+ggsave(filename = "../Results/BLR/US_violin_dummyVSno.jpeg",plot = pl,width = 10, height = 10)
+
+pl<-ggplot(Pred.all,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_boxplot()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date)) 
+ggsave(filename = "../Results/BLR/US_boxplot_dummyVSno.jpeg",plot = pl,width = 10, height = 10)
 
