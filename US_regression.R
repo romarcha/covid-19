@@ -33,7 +33,7 @@ if(Dum){
   var.names = c(var.names,"week")
 }
 
-for(i in 1:(nrow(us_wide_log)-1)){
+for(i in 1:(nrow(us_wide_log))){
   X=cbind(1,as.matrix(us_wide_log[1:i,var.names]))
   y=as.matrix(us_wide_log[1:i,"gt"])
   y.hat=matrix(NA,iter.num,length(y))
@@ -64,22 +64,20 @@ for(i in 1:(nrow(us_wide_log)-1)){
   }
 }
 
+# coefficients plots
+
 coef.df=c()
 for(i in 1:nrow(us_wide_log)){
   coef.df=rbind(coef.df,cbind(time=i,coef.list[[i]])) # convert the list to dataframe
 }
 coef.df=as_tibble(coef.df) %>% pivot_longer(.,cols=-time,names_to = "Variables",values_to = "Coefficient")
 
-burnin=3
-
+burnin=3  # number of days to burnin, because at the early stage of the regression the variance of the coefficents are large
 g <- filter(coef.df,Variables!="variance",time>burnin) %>% ggplot(.,aes(x=factor(time),y=Coefficient,fill=factor(time))) + geom_boxplot() +facet_wrap(facets = vars(Variables),nrow = optdim(num.para)[1],ncol = optdim(num.para)[2]) + theme(axis.text.x = element_text( angle = 90,size =3),legend.position = "none")  + scale_x_discrete(name ="Date",breaks=c((burnin+1):nrow(us_wide)), labels=unique(us_wide_log$target_end_date)[(burnin+1):nrow(us_wide)]) 
 g
-ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 5,width = 5)
+ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 5,width = 5) 
 
-#-----------------------------------------------------
-###    Bayesian inference with Conjugate priors. Training VS. Prediction
-  # MCMC-Gibbs sampler
-
+# # estimation/prediction plots
 train.part=exp(y.hat[,1:train.num.start])  
 colnames(train.part) = as.character(us_wide_log$target_end_date[1:train.num.start]) 
 train.part=pivot_longer(as_tibble(train.part),cols=everything(),names_to = "Target.Date",values_to = "Inc.death") %>% mutate(.,Category="train")
@@ -92,6 +90,8 @@ pred.part=pivot_longer(as_tibble(pred.part),cols=everything(),names_to = "Target
 pred.part$gt=rep(us_wide$gt[(1+train.num.start):nrow(us_wide_log)],iter.num*sim.num)
 pred.part$Date=rep(c((1+train.num.start):nrow(us_wide_log)),iter.num*sim.num)
 all.box=bind_rows(train.part,pred.part)
+
+
 if(Dum){
   save.image(file = "../Results/BLR/US_BLR_Conjugate.RData")
 } else{
