@@ -16,7 +16,7 @@ pred.Y=c()
 library(invgamma)
 library(MASS)
 num.para= 1+ n.models*steps + 1 + 1*Dum # number of parameters = intercept + coefficients + sigma + dummyvariable
-priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(10^2,num.para-1,num.para-1)),sig=c(a0=0.1,b0=0.1))
+priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(1,num.para-1,num.para-1)),sig=c(a0=2.05,b0=1.05))
 #hyperparameters
 Delta_0 = solve( priors.dist$beta$cv)
 mu_0 = priors.dist$beta$mu
@@ -72,43 +72,38 @@ for(i in 1:nrow(us_wide_log)){
 }
 coef.df=as_tibble(coef.df) %>% pivot_longer(.,cols=-time,names_to = "Variables",values_to = "Coefficient")
 
-burnin=3  # number of days to burnin, because at the early stage of the regression the variance of the coefficents are large
-g <- filter(coef.df,Variables!="variance",time>burnin) %>% ggplot(.,aes(x=factor(time),y=Coefficient,fill=factor(time))) + geom_boxplot() +facet_wrap(facets = vars(Variables),nrow = optdim(num.para)[1],ncol = optdim(num.para)[2]) + theme(axis.text.x = element_text( angle = 90,size =3),legend.position = "none")  + scale_x_discrete(name ="Date",breaks=c((burnin+1):nrow(us_wide)), labels=unique(us_wide_log$target_end_date)[(burnin+1):nrow(us_wide)]) 
+burnin=0  # number of days to burnin, because at the early stage of the regression the variance of the coefficents are large
+g <- filter(coef.df,Variables!="variance",time>burnin) %>% ggplot(.,aes(x=factor(time),y=Coefficient,fill=factor(time))) + geom_boxplot() +facet_wrap(facets = vars(Variables),nrow = optdim(num.para)[1],ncol = optdim(num.para)[2]) + theme(axis.text.x = element_text( angle = 90,size =5),legend.position = "none")  + scale_x_discrete(name ="Date",breaks=c((burnin+1):nrow(us_wide)), labels=unique(us_wide_log$target_end_date)[(burnin+1):nrow(us_wide)]) 
 g
-ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 5,width = 5) 
+ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 10,width = 10) 
+
 
 # # estimation/prediction plots
-train.part=exp(y.hat[,1:train.num.start])  
-colnames(train.part) = as.character(us_wide_log$target_end_date[1:train.num.start]) 
-train.part=pivot_longer(as_tibble(train.part),cols=everything(),names_to = "Target.Date",values_to = "Inc.death") %>% mutate(.,Category="train")
-train.part$gt=rep(us_wide$gt[1:train.num.start],iter.num)
-train.part$Date=rep(c(1:train.num.start),iter.num)
 
 pred.part=exp(t(pred.Y))
-colnames(pred.part)= as.character(us_wide_log$target_end_date[(1+train.num.start): nrow(us_wide_log)])
+apply(pred.part,2,function (a) quantile(a,c(0.025,0.975)))->quan.Y
+s=0
+for(i in 2:nrow(us_wide)){
+  s=s+(quan.Y[1,(i-1)]<= us_wide$gt[i] &&  us_wide$gt[i]<= quan.Y[2,(i-1)])
+}
+s
+
+colnames(pred.part)= as.character(us_wide_log$target_end_date[(1+1): nrow(us_wide_log)])
 pred.part=pivot_longer(as_tibble(pred.part),cols=everything(),names_to = "Target.Date",values_to = "Inc.death")%>% mutate(.,Category="prediction")
-pred.part$gt=rep(us_wide$gt[(1+train.num.start):nrow(us_wide_log)],iter.num*sim.num)
-pred.part$Date=rep(c((1+train.num.start):nrow(us_wide_log)),iter.num*sim.num)
-all.box=bind_rows(train.part,pred.part)
+pred.part$Date=rep(c((1+1):nrow(us_wide_log)),iter.num*sim.num)
+
+burnin=1
+gt<- us_wide %>% dplyr::select(.,target_end_date,gt) %>% mutate(., Date=1:nrow(us_wide)) %>% filter(.,Date>1+burnin)
 
 
-if(Dum){
-  save.image(file = "../Results/BLR/US_BLR_Conjugate.RData")
-} else{
-  save.image(file = "../Results/BLR/US_BLR_Conjugate_without_dummy.RData")
-}
-pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_boxplot()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=factor(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date)) 
-if(Dum){
-  ggsave(filename = "../Results/BLR/US_boxplot.pdf",plot = pl,width = 10, height = 10)
-} else{
-  ggsave(filename = "../Results/BLR/US_boxplot_without_dummy.pdf",plot = pl,width = 10, height = 10,device = 'jpeg')
-}
+pl<-ggplot(filter(pred.part,Date>1+burnin),aes(x=factor(Date),y=Inc.death,fill=factor(Date))) + geom_boxplot() #outlier.shape = NA
+pl<- pl + geom_point(data=gt,aes(x=factor(Date),y=gt)) +geom_line()
+pl<-pl  +theme(legend.position="none") + theme(axis.text.x = element_text( angle = 90)) + scale_x_discrete(name ="Date",breaks=c(2:nrow(us_wide))-0.5, labels=unique(us_wide_log$target_end_date[-1])) 
+pl
+ggsave(filename = paste0("../Results/BLR/US_boxplot_dummy",Dum,".pdf"),plot = pl,width = 10, height = 10)
+ggsave(filename = filename = paste0("../Results/BLR/US_boxplot_dummy",Dum,".jpeg"),plot = pl,width = 10, height = 10)
+save.image(file = paste0("../Results/BLR/US_BLR_Conjugate_dummy",Dum,".RData"))
 
-if(Dum){
-  ggsave(filename = "../Results/BLR/US_boxplot.jpeg",plot = pl,width = 10, height = 10)
-} else{
-  ggsave(filename = "../Results/BLR/US_boxplot_without_dummy.jpeg",plot = pl,width = 10, height = 10,device = 'jpeg')
-}
 
 pl<-ggplot(all.box,aes(x=factor(Date),y=Inc.death,fill=Category)) + geom_violin()+  theme(axis.text.x = element_text( angle = 90)) + geom_point(aes(x=(Date),y=gt))+geom_line(aes(x=Date,y=gt,color=Category)) + scale_x_discrete(name ="Date",breaks=c(1:nrow(us_wide)), labels=unique(us_wide_log$target_end_date))
 
