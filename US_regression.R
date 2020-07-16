@@ -1,55 +1,88 @@
-#################################################prepare the data
+load("../Results/US_data_regression.RData")
 cat="inc" # "acc" This variable indicates whether incident death or accumulate death
-
-us=read.csv('../raw-data/us_result.csv')
-# gt=read.csv('../raw-data/gt.csv')
-library(dplyr)
-library(tidyr)
-models= c("Geneva","YYG") # YYG and IHME predict USA and also states, Geneva only predicts USA
-us=filter(us,model_name %in% models,location_long =="United States")
-
-ahead=7 # decide how many days are included in the regression
+steps=7 # number of steps of prediction used in the ensemble model
+model.names=c("Geneva","YYG") # individual models to be combined
+n.models= length(model.names) # number of individual models to be combined
+Dum=1
 
 
-us_part1=filter(us,model_name %in% models[1])
+####----
+### Bayesian inference  with Conjugate priors.
+# sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
+library(invgamma)
+library(MASS)
+num.para= 1+ n.models*steps + 1 + 1*Dum # number of parameters = intercept + coefficients + sigma + dummyvariable
+priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(10^5,num.para-1,num.para-1)),sig=c(a0=0.1,b0=0.1))
+#hyperparameters
+Delta_0 = solve( priors.dist$beta$cv)
+mu_0 = priors.dist$beta$mu
+a_0=priors.dist$sig["a0"]
+b_0 = priors.dist$sig["b0"]
 
-us_part1=group_by(us_part1,target_end_date,forecast_date,model_name,gt_source)
-us_part1=summarise(us_part1,expected_value=sum(expected_value),gt=sum(gt),lookahead=mean(lookahead))
-
-us_part2=filter(us,model_name %in% models[2]) # YYG predict USA and also states
-us_part2=group_by(us_part2,target_end_date,forecast_date,model_name,gt_source)
-us_part2=summarise(us_part2,expected_value=max(expected_value),gt=max(gt),lookahead=mean(lookahead))
-
-us_group=bind_rows(us_part1,us_part2)
-
-us_wide=pivot_wider(us_group,names_from = c("model_name"), values_from = expected_value) %>% filter(.,as.Date(forecast_date)>as.Date("2020-04-14")) %>%filter(.,lookahead<=ahead) %>%filter(.,gt>=0)  %>%filter(.,gt_source %in% c("JHU","ECDC"))  
-
-for(i in 1:nrow(us_wide)){
-  temp=filter(us_wide,forecast_date==us_wide$forecast_date[i],target_end_date==us_wide$target_end_date[i])
-  us_wide[i,models[1]]=mean(as.matrix(temp[,models[1]]),na.rm = T)
-  us_wide[i,models[2]]=mean(as.matrix(temp[,models[2]]),na.rm = T)
-  
+# MCMC-Gibbs sampler
+iter.num=2000
+coef.mat=matrix(NA,iter.num,num.para)
+coef.list=vector("list",nrow(us_wide_log))
+y.hat.list=vector("list",nrow(us_wide_log))
+var.names=as.vector(t(outer(paste0(model.names,"_"),c(1:steps),FUN = "paste0"))) #  model predictions for ensembling
+if(Dum){
+  var.names = c(var.names,"week")
 }
 
-us_wide=ungroup(filter(us_wide,gt_source=="JHU")) %>% dplyr::select(.,-forecast_date,-gt_source)
+for(i in 1:nrow(us_wide_log)){
+  
+  X=cbind(1,as.matrix(us_wide_log[1:i,var.names]))
+  y=as.matrix(us_wide_log[1:i,"gt"])
+  y.hat=matrix(NA,iter.num,length(y))
+  Delta_n = Delta_0 + t(X)%*%X
+  iDelta_n = solve(Delta_n)
+  mu_n = solve(Delta_n)%*% (Delta_0 %*% mu_0 + t(X)%*% y)
+  a_n = a_0  + i/2 # posterior parameter of sigma^2
+  b_n = b_0 + 0.5* (t(y)%*%y + t(as.matrix(mu_0))%*% Delta_0 %*% as.matrix(mu_0) - t(mu_n) %*% Delta_n%*% mu_n)
+  for(iter in 1:iter.num){
+    coef.mat[iter,num.para] = rinvgamma(n=1,shape = a_n, scale = b_n) # draw sigma^2 
+    coef.mat[iter,-num.para] = mvrnorm(n=1,mu=mu_n,Sigma = coef.mat[iter,num.para]* iDelta_n)
+    y.hat[iter,]= X%*%coef.mat[iter,-num.para]
+  }
+  colnames(coef.mat)=c("Intercept",var.names,"variance")
+  coef.list[[i]] = coef.mat
+  y.hat.list[[i]]= y.hat
+}
 
-us_wide=pivot_wider(us_wide,names_from = lookahead,values_from = c("Geneva","YYG"))
-us_wide=drop_na(us_wide) %>% mutate(.,week=as.numeric(weekdays(as.Date(target_end_date)) %in% c("Saturday","Sunday","Monday"))) 
-us_wide$target_end_date=as.Date(us_wide$target_end_date)
-us_wide=us_wide[order(us_wide$target_end_date),]
-## take the data into log-scale
-us_wide_log=(us_wide)
-us_wide_log[,c(2:16)]=log(us_wide_log[,c(2:16)])
-####----
-#   -----------------------------------------------------------Data is ready
+coef.df=c()
+for(i in 1:nrow(us_wide_log)){
+  coef.df=rbind(coef.df,cbind(time=i,coef.list[[i]])) # convert the list to dataframe
+}
+coef.df=as_tibble(coef.df) %>% pivot_longer(.,cols=-time,names_to = "Variables",values_to = "Coefficient")
 
-####----
-#------------------------------------------------------------------EDA plots
-source('US_regression_EDA.R')
+burnin=3
+tem.df=filter(coef.df,Variables!="variance",time>burnin) 
+g <- ggplot(tem.df,aes(x=factor(time),y=Coefficient,fill=factor(time))) + geom_boxplot() +facet_wrap(facets = vars(Variables),nrow = 4,ncol = 4) + theme(axis.text.x = element_text( angle = 90,size =3),legend.position = "none")  + scale_x_discrete(name ="Date",breaks=c((burnin+1):nrow(us_wide)), labels=unique(us_wide_log$target_end_date)[(burnin+1):nrow(us_wide)]) 
+g
+ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 5,width = 5)
+
+g <- ggplot(coef.df,aes(x=factor(time),y=Coefficient)) + geom_boxplot() +facet_wrap(facets = vars(Variables),nrow = 2,ncol = 3)
+
+
+ggplot(coef.df,aes(x=Variables,y=Coefficient,colour=time)) + geom_boxplot()
+
+
+# starting points
+model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
+paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
+
+boxplot(exp(y.hat))
+points(us_wide$gt,col='red')
+lines(us_wide$gt,col='red')
+title(main="gt VS. posterior samples of Y")
+
+boxplot(result.mat)
+points(model$coefficients,col='red')
+title(main= " Comparison between MCMC and MLE of estimation")
 
 ####----   
 #---------------------------------------------------- regression (MLE version)
-Dum=FALSE #FALSE
+
 train.num=30 # split training and prediction set
 if(Dum){
   model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
@@ -99,7 +132,7 @@ ggplot(us_long, aes(x=target_end_date,y=deaths,colour=var)) + geom_line() + scal
 ggplot(filter(us_long,var %in% c("gt","fitted")), aes(x=target_end_date,y=deaths,colour=var)) + geom_line() 
 
 ####----
-### -------------Bayesian inference without constraints with uniform priors
+### ---------------------------Bayesian inference without positive constraints on uniform priors
 priors.dist=matrix(c(c(-10^5,10^5),rep(c(-100,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=TRUE)
 row.names(priors.dist)=c("inter",rep("coef",14),"week","sig")
 log.post.likelihood=function(data,paras){
@@ -169,7 +202,7 @@ boxplot(exp(y.hat))
 points(us_wide$gt,col='red')
 lines(us_wide$gt,col='red')
 #-----------------------------------------------------------------------------------------------------------------------------------------------
-### Bayesian inference with constraints with uniform priors
+### Bayesian inference with positive constraints on uniform priors
 priors.dist=matrix(c(c(-10^5,10^5),rep(c(0,100),14),c(-10^5,10^5),c(0,500)),ncol=2,byrow=TRUE)
 row.names(priors.dist)=c("inter",rep("coef",14),"week","sig")
 
@@ -235,57 +268,7 @@ boxplot(exp(y.hat))
 points(us_wide$gt,col='red')
 lines(us_wide$gt,col='red')
 ####----
-### Bayesian inference without constraints with Conjugate priors. try not to use the dummy variable
-# sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
-library(invgamma)
-library(MASS)
-train.num=36
-num.para=16
-X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2,ncol(us_wide_log))]))
-y=as.matrix(us_wide_log[1:train.num,2])
-
-priors.dist=list(beta=list(mu=rep(0,num.para-1),cv=diag(10^5,num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
-
-#hyperparameters
-Delta_0 = solve( priors.dist$beta$cv)
-Delta_n = Delta_0 + t(X)%*%X
-iDelta_n = solve(Delta_n)
-mu_0 = priors.dist$beta$mu
-mu_n = solve(Delta_n)%*% (Delta_0 %*% mu_0 + t(X)%*% y)
-a_0=priors.dist$sig["a0"]
-a_n = a_0  + nrow(us_wide_log[1:train.num,]) # posterior parameter of sigma^2
-b_0 = priors.dist$sig["b0"]
-b_n = b_0 + 0.5* (t(y)%*%y + t(as.matrix(mu_0))%*% Delta_0 %*% as.matrix(mu_0) - t(mu_n) %*% Delta_n%*% mu_n)
-
-
-# starting points
-model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
-paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
-
-
-# MCMC-Gibbs sampler
-iter.num=2000
-result.mat=matrix(NA,iter.num,length(paras))
-y.hat=matrix(NA,iter.num,nrow(us_wide))
-for(iter in 1:iter.num){
-  # draw sigma^2 
-  result.mat[iter,length(paras)] = rinvgamma(n=1,shape = a_n, scale = b_n)
-  result.mat[iter,-length(paras)] = mvrnorm(n=1,mu=mu_n,Sigma = result.mat[iter,length(paras)]* iDelta_n)
-  
-  temp=cbind(1,us_wide_log[,-c(1,2)])
-  y.hat[iter,]= X%*%result.mat[iter,-length(paras)]
-}
-boxplot(exp(y.hat))
-points(us_wide$gt,col='red')
-lines(us_wide$gt,col='red')
-title(main="gt VS. posterior samples of Y")
-
-boxplot(result.mat)
-points(model$coefficients,col='red')
-title(main= " Comparison between MCMC and MLE of estimation")
-
-####----
-### Bayesian inference without constraints with Conjugate priors
+### Bayesian inference with Conjugate priors and Dummy variable
 # sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
 library(invgamma)
 library(MASS)
@@ -334,7 +317,7 @@ boxplot(result.mat)
 points(model$coefficients,col='red')
 title(main= " Comparison between MCMC and MLE of estimation")
 #-----------------------------------------------------
-###                Bayesian inference without constraints with Conjugate priors. Training VS. Prediction
+###    Bayesian inference with Conjugate priors. Training VS. Prediction
 
 Dum=TRUE  # include the dummy variable (week) or not. TRUE;FALSE
 train.num.start=30
