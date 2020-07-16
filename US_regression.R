@@ -6,11 +6,12 @@ model.names=c("Geneva","YYG") # individual models to be combined
 n.models= length(model.names) # number of individual models to be combined
 Dum=1
 pos.cons=1 # whether there is positive constraints for ceofficients
-
+sim.num=100 # number of random draws from predictive posterior distribution
 
 ####----- 
 #                                                      Bayesian inference  with Conjugate priors.
 # sigma^2 is Inverse-Gamma distributed, beta is conditionally distributed as normal distribution
+pred.Y=c()
 
 library(invgamma)
 library(MASS)
@@ -32,7 +33,7 @@ if(Dum){
   var.names = c(var.names,"week")
 }
 
-for(i in 1:nrow(us_wide_log)){
+for(i in 1:(nrow(us_wide_log)-1)){
   X=cbind(1,as.matrix(us_wide_log[1:i,var.names]))
   y=as.matrix(us_wide_log[1:i,"gt"])
   y.hat=matrix(NA,iter.num,length(y))
@@ -49,6 +50,18 @@ for(i in 1:nrow(us_wide_log)){
   colnames(coef.mat)=c("Intercept",var.names,"variance")
   coef.list[[i]] = coef.mat
   y.hat.list[[i]]= y.hat
+  
+  # predict y for next step using the posterior samples of parameters
+  X.new=cbind(1,us_wide_log[(1+i),var.names])
+
+  if(!anyNA(X.new)){
+    pred.mean=as.matrix(X.new)%*% t(coef.mat[,c("Intercept",var.names)])
+    temp.Y=c()
+    for(ii in 1:length(pred.mean)){
+      temp.Y=c(temp.Y, rnorm(n=sim.num,mean=pred.mean[ii],sd=sqrt(coef.mat[ii,num.para])))
+    }
+    pred.Y= rbind(pred.Y, temp.Y) # incorporating the coef and sigma
+  }
 }
 
 coef.df=c()
@@ -63,77 +76,10 @@ g <- filter(coef.df,Variables!="variance",time>burnin) %>% ggplot(.,aes(x=factor
 g
 ggsave(filename = paste0("../Results/BLR/US_coef_step",steps,"dum",Dum, ".pdf"),height = 5,width = 5)
 
-
 #-----------------------------------------------------
 ###    Bayesian inference with Conjugate priors. Training VS. Prediction
-
-Dum=TRUE  # include the dummy variable (week) or not. TRUE;FALSE
-train.num.start=30
-pred.Y=c()
-coef.list=list()
-if(Dum){num.para=17} else(num.para=16)
-
-
-priors.dist=list(beta=list(mu=rep(1/(num.para-1),num.para-1),cv=diag(10^(5),num.para-1,num.para-1)),sig=c(a0=0.0001,b0=0.0001))
-
-for(train.num in train.num.start:nrow(us_wide_log)){
-  
-  if(Dum){
-    X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2)]))
-  } else{
-    X=cbind(1,as.matrix(us_wide_log[1:train.num,-c(1,2,ncol(us_wide_log))]))
-  }
-  
-  y=as.matrix(us_wide_log[1:train.num,2])
-  #hyperparameters
-  Delta_0 = solve( priors.dist$beta$cv)
-  Delta_n = Delta_0 + t(X)%*%X
-  iDelta_n = solve(Delta_n)
-  mu_0 = priors.dist$beta$mu
-  mu_n = solve(Delta_n)%*% (Delta_0 %*% mu_0 + t(X)%*% y)
-  a_0=priors.dist$sig["a0"]
-  a_n = a_0  + nrow(us_wide_log[1:train.num,]) # posterior parameter of sigma^2
-  b_0 = priors.dist$sig["b0"]
-  b_n = b_0 + 0.5* (t(y)%*%y + t(as.matrix(mu_0))%*% Delta_0 %*% as.matrix(mu_0) - t(mu_n) %*% Delta_n%*% mu_n)
-  # starting points
-  if(Dum){
-    model=lm(gt~. ,data=us_wide_log[1:train.num,-1])
-    paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
-  } else{
-    model=lm(gt~. ,data=us_wide_log[1:train.num,-c(1,ncol(us_wide_log))])
-    paras=c(model$coefficients,(var(model$residuals)/length(model$residuals))) # use MLE of unconstrained linear regression
-  }
-  
-  
   # MCMC-Gibbs sampler
-  iter.num=2000
-  sim.num=100 # number of random draws from predictive posterior distribution
-  result.mat=matrix(NA,iter.num,length(paras))
-  y.hat=matrix(NA,iter.num,nrow(us_wide_log[1:train.num,]))
-  for(iter in 1:iter.num){
-    # draw sigma^2 
-    result.mat[iter,length(paras)] = rinvgamma(n=1,shape = a_n, scale = b_n)
-    result.mat[iter,-length(paras)] = mvrnorm(n=1,mu=mu_n,Sigma = result.mat[iter,length(paras)]* iDelta_n)
-    
-    temp=cbind(1,us_wide_log[,-c(1,2)])
-    y.hat[iter,]= X%*%result.mat[iter,-length(paras)]
-  }
-  coef.list[[train.num-train.num.start+1]]=result.mat
-  if(Dum){
-    X.new=cbind(1,us_wide_log[(1+train.num),-c(1,2)])
-  } else{
-    X.new=cbind(1,us_wide_log[(1+train.num),-c(1,2,ncol(us_wide_log))])
-  }
-  
-  if(!anyNA(X.new)){
-    pred.mean=as.matrix(X.new)%*% t(result.mat[,-length(paras)])
-    temp.Y=c()
-    for(ii in 1:length(pred.mean)){
-      temp.Y=c(temp.Y, rnorm(n=sim.num,mean=pred.mean[ii],sd=sqrt(result.mat[ii,length(paras)])))
-    }
-    pred.Y= rbind(pred.Y, temp.Y) # incorporating the coef and sigma
-  }
-}
+
 train.part=exp(y.hat[,1:train.num.start])  
 colnames(train.part) = as.character(us_wide_log$target_end_date[1:train.num.start]) 
 train.part=pivot_longer(as_tibble(train.part),cols=everything(),names_to = "Target.Date",values_to = "Inc.death") %>% mutate(.,Category="train")
