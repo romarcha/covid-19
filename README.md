@@ -16,6 +16,7 @@ of the models currently being used to predict deaths and medical resources neede
     ```
     sudo apt-get install python3
     sudo apt-get install python3-pip
+    sudo apt-get install libcurl4-openssl-dev
     sudo apt-get install postgresql-server-dev-all
     ```
     
